@@ -26,7 +26,7 @@ AES-256-GCM field encryption protects BaaS account ID, routing number, branch, a
 
 ## Deploy the Spring backend to Render
 
-The Render Blueprint is in [`render.yaml`](./render.yaml). Connect this GitHub repository in Render and create a Blueprint instance from that file. It builds the Dockerfile in `backend/`, enables the `prod` Spring profile, and uses `/actuator/health` as its health check. Production database settings target Render PostgreSQL; the old GCP Cloud SQL socket configuration is not used by this profile.
+The Render Blueprint is in [`giro-app/render.yaml`](./render.yaml). Connect this GitHub repository in Render and select that Blueprint file (`giro-app/render.yaml`). The service builds from `giro-app/backend/`, enables the `prod` Spring profile, and uses `/actuator/health` as its health check. Production database settings target Render PostgreSQL; the old GCP Cloud SQL socket configuration is not used by this profile.
 
 Create a Render PostgreSQL database and set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` on the backend service from that database's **internal** connection details. Set `GIRO_JWT_SECRET_BASE64` to the same 32-byte Base64 JWT secret used by the Next.js server, and `GIRO_ENCRYPTION_KEY_BASE64` to the existing 32-byte Base64 encryption key. Add both through Render's environment-variable/secret settings; never put key values in `render.yaml`, Git, or build arguments. Keep `BAAS_ENABLED=false` until a real BaaS integration is configured.
 
@@ -63,7 +63,7 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Deploy the Next.js frontend to Vercel
 
-Import this GitHub repository in [Vercel](https://vercel.com/new). Set the project root to the repository root (`./`), where the frontend `package.json` is located, and keep the detected Next.js build settings.
+Import this GitHub repository in [Vercel](https://vercel.com/new). Set the project root to `giro-app`, where the frontend `package.json` is located, and keep the detected Next.js build settings.
 
 Wait until the Render backend is deployed and `/actuator/health` reports healthy. In the Vercel project's environment variables, add:
 

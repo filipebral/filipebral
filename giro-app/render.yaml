@@ -2,7 +2,7 @@ services:
   - type: web
     name: giro-backend-api
     runtime: docker
-    rootDir: backend
+    rootDir: giro-app/backend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /actuator/health
     envVars:
