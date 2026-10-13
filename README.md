@@ -61,8 +61,15 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deploy the Next.js frontend to Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Import this GitHub repository in [Vercel](https://vercel.com/new). Set the project root to the repository root (`./`), where the frontend `package.json` is located, and keep the detected Next.js build settings.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Wait until the Render backend is deployed and `/actuator/health` reports healthy. In the Vercel project's environment variables, add:
+
+- `GIRO_BACKEND_URL`: the backend's actual public HTTPS URL, for example `https://giro-backend-api.onrender.com` (without a trailing slash).
+- `GIRO_JWT_SECRET_BASE64`: the exact same 32-byte Base64 JWT secret configured on the backend.
+
+Add these variables to Production (and Preview too, if preview deployments should use the backend), then redeploy so the functions receive them. Do not add `GIRO_ENCRYPTION_KEY_BASE64` to Vercel; it is backend-only. Never commit secret values.
+
+The browser calls the Next.js `/api/auth` and `/api/proxy` routes, which forward requests server-side. Therefore, do not configure `NEXT_PUBLIC_API_URL`; use the server-only `GIRO_BACKEND_URL` instead. This keeps the backend address out of the client bundle and preserves the HttpOnly JWT-cookie flow.
