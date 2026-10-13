@@ -19,6 +19,7 @@
 
 # production
 /build
+/backend/target.backoult/
 
 # misc
 .DS_Store
