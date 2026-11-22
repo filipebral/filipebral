@@ -1,6 +1,7 @@
 package com.giro_app.backend;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -13,8 +14,12 @@ public class AppUser {
     @Id
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 254)
-    private String email;
+    @Convert(converter = SensitiveDataConverter.class)
+    @Column(length = 255)
+    private String cpf;
+
+    @Column(name = "cpf_lookup_hash", unique = true, length = 64)
+    private String cpfLookupHash;
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -25,9 +30,10 @@ public class AppUser {
     protected AppUser() {
     }
 
-    public AppUser(String email, String name, String passwordHash) {
+    public AppUser(String cpf, String cpfLookupHash, String name, String passwordHash) {
         this.id = UUID.randomUUID();
-        this.email = email;
+        this.cpf = cpf;
+        this.cpfLookupHash = cpfLookupHash;
         this.name = name;
         this.passwordHash = passwordHash;
     }
@@ -36,8 +42,8 @@ public class AppUser {
         return id;
     }
 
-    public String getEmail() {
-        return email;
+    public String getCpf() {
+        return cpf;
     }
 
     public String getName() {

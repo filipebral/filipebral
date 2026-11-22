@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CreateSplitGroupModal from "@/components/CreateSplitGroupModal";
 import ProcessSplitModal from "@/components/ProcessSplitModal";
+import SimulationPanel from "@/components/SimulationPanel";
+import FinancialSimulators from "@/components/FinancialSimulators";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -57,9 +59,9 @@ export default function Dashboard() {
         <section className="bg-[#121214] border border-white/10 rounded-3xl p-6 shadow-2xl">
           <div className="flex justify-between items-center mb-4">
             <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Saldo disponível</span>
-            <span className="text-xs text-[#00FF66] bg-[#00FF66]/10 px-2.5 py-1 rounded-full border border-[#00FF66]/20 font-semibold">Ativo</span>
+            <span className="text-xs text-zinc-400 bg-white/5 px-2.5 py-1 rounded-full border border-white/10 font-semibold">Integração pendente</span>
           </div>
-          <div className="text-3xl font-extrabold text-white tracking-tight mb-6">R$ 0,00</div>
+          <div className="text-sm text-zinc-400 mb-6">Saldo real indisponível sem integração bancária.</div>
           <label htmlFor="customer-id" className="block text-xs text-zinc-400 mb-2">Identificador do cliente no BaaS</label>
           <input id="customer-id" value={customerId} onChange={(event) => setCustomerId(event.target.value)} className="w-full bg-[#18181b] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm mb-3" />
           {message && <p role="status" className="mb-3 text-xs text-emerald-400">{message}</p>}
@@ -68,6 +70,9 @@ export default function Dashboard() {
             {loading ? "Processando..." : "Criar conta & vincular BaaS"}
           </button>
         </section>
+
+        <SimulationPanel />
+        <FinancialSimulators />
 
         <div className="grid grid-cols-2 gap-3">
           <button onClick={() => setIsGroupModalOpen(true)} className="bg-[#121214] border border-[#00FF66]/30 p-4 rounded-2xl text-sm font-bold text-[#00FF66]">Novo rateio</button>

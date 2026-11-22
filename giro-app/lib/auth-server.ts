@@ -26,7 +26,7 @@ export async function authenticate(request: NextRequest, action: "login" | "regi
   const result = await backendResponse.json().catch(() => null) as {
     token?: string;
     expiresIn?: number;
-    user?: { id: string; name: string; email: string };
+    user?: { id: string; name: string };
     message?: string;
     detail?: string;
   } | null;

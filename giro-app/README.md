@@ -2,7 +2,19 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Security and authentication
 
-The backend provides email/password registration and login. Passwords are stored as BCrypt hashes, and successful authentication returns a 15-minute HS256 JWT. The Next.js server stores that token in an `HttpOnly`, `SameSite=Lax` cookie; `proxy.ts` validates it before allowing access to `/dashboard`. Browser API calls are sent through the Next.js server, which forwards the token as a bearer credential to Spring Security.
+The backend provides CPF/password registration and login. Passwords are stored as BCrypt hashes, and successful authentication returns a 15-minute HS256 JWT. CPF values are encrypted at rest; a keyed HMAC index supports lookups without storing a plain CPF search key. The Next.js server stores the token in an `HttpOnly`, `SameSite=Lax` cookie; `proxy.ts` validates it before allowing access to `/dashboard`. Browser API calls are sent through the Next.js server, which forwards the token as a bearer credential to Spring Security.
+
+The CPF check-digit validation is only a format check; it does not verify identity or open a bank account. Existing email-only users are not assigned a CPF automatically. No legacy-account migration/recovery flow is implemented yet, so those users cannot log in until a verified migration flow is added and completed. A real financial account requires a contracted BaaS/banking provider, its approved onboarding and KYC flow, and securely configured API credentials. The current mock BaaS is not a real bank integration; do not enable it for production onboarding.
+
+### Account and Pix simulation
+
+The dashboard offers a separate simulated account, fictitious balance, the last 50 simulated transactions, simulated receipts and simulated Pix, transfer and bill debits. Simulated bills accept only a fictitious description, amount and due date, not a barcode. Users can add fictitious balance and specify a fictional recipient name; no provider is contacted, no real money moves, and no recipient is credited. Do not enter real Pix keys, barcodes or personal information. Simulation data is stored separately from real account data and is never a source of truth for a banking provider.
+
+The authenticated `/simulation` endpoints are available in production as well as development; set `APP_SIMULATION_ENABLED=false` to disable them. Each credit, Pix or scheduled Pix request uses a user-scoped `requestId` for safe retries; reusing it for different operation details is rejected. Simulated Pix schedules are checked every 30 seconds while the backend is running; overdue schedules are processed after it restarts. Insufficient fictitious balance marks the schedule as failed without retry. A schedule is processed atomically and only once, including across backend instances.
+
+Before offering real services, implement the chosen provider's contracts, onboarding and identity verification, authorization, reconciliation, transaction lifecycle and operational/security controls; the simulation does not provide these.
+
+The dashboard also includes local loan and investment calculators. The loan estimate uses fixed monthly installments (Price system); the investment estimate compounds monthly and adds contributions at each month-end. Rates and terms are supplied by the user. Neither calculator includes taxes, fees or inflation, and neither offers or contracts a financial product.
 
 Run Next.js as a server (for example, `npm run start`). Static export is disabled because authentication cookies, API routes, and `proxy.ts` require server-side execution.
 
@@ -22,15 +34,50 @@ Set `GIRO_JWT_SECRET_BASE64` for both the backend and Next.js server. Set `GIRO_
 
 For local RabbitMQ, provide `RABBITMQ_DEFAULT_USER` and `RABBITMQ_DEFAULT_PASS` to Docker Compose; the compose file intentionally contains no default credentials.
 
-AES-256-GCM field encryption protects BaaS account ID, routing number, branch, and account number at rest. In production, Flyway applies `V2__add_auth_and_sensitive_fields.sql`; the backend encrypts any legacy plaintext values in batches during startup before the application becomes ready. Keep the encryption key stable and back it up securely: changing it without re-encrypting stored data prevents decryption.
+AES-256-GCM field encryption protects CPF and BaaS account ID, routing number, branch, and account number at rest. In production, Flyway applies the database migrations; the backend encrypts any legacy plaintext account fields in batches during startup before the application becomes ready. Keep the encryption key stable and back it up securely: changing it without re-encrypting stored data prevents decryption and invalidates CPF lookup indexes.
 
 ## Deploy the Spring backend to Render
 
-The Render Blueprint is in [`giro-app/render.yaml`](./render.yaml). Connect this GitHub repository in Render and select that Blueprint file (`giro-app/render.yaml`). The service builds from `giro-app/backend/`, enables the `prod` Spring profile, and uses `/actuator/health` as its health check. Production database settings target Render PostgreSQL; the old GCP Cloud SQL socket configuration is not used by this profile.
+The Render Blueprint is in [`giro-app/render.yaml`](./render.yaml). Connect this GitHub repository in Render and select that Blueprint file (`giro-app/render.yaml`). The service builds from `giro-app/backend/`, enables the `prod` Spring profile, and uses `/actuator/health` as its health check. By default, production connects to Render PostgreSQL through `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`.
 
 Create a Render PostgreSQL database and set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` on the backend service from that database's **internal** connection details. Set `GIRO_JWT_SECRET_BASE64` to the same 32-byte Base64 JWT secret used by the Next.js server, and `GIRO_ENCRYPTION_KEY_BASE64` to the existing 32-byte Base64 encryption key. Add both through Render's environment-variable/secret settings; never put key values in `render.yaml`, Git, or build arguments. Keep `BAAS_ENABLED=false` until a real BaaS integration is configured.
 
 After the first deploy, confirm the service health check passes and copy its HTTPS URL into the Next.js deployment's `GIRO_BACKEND_URL`. Use the Render-provided public URL for frontend-to-backend server traffic only if necessary; prefer private service connectivity when both services run in Render. Do not rotate either key without planning a token/session invalidation or re-encrypting existing account data, respectively.
+
+### Connect the Render backend to Google Cloud SQL for PostgreSQL
+
+The backend includes the Google Cloud SQL PostgreSQL Socket Factory. To use it instead of Render PostgreSQL:
+
+1. Enable the Cloud SQL Admin API and grant a dedicated Google service account the `Cloud SQL Client` role for the project containing the instance.
+2. Ensure the Cloud SQL instance has a public IP. The connector encrypts and authenticates the connection, but Render still needs a network route to the instance; this profile selects the public IP.
+3. In the Render backend service, add the service account JSON as a **Secret File** named `cloudsql-service-account.json`. Render mounts it at `/etc/secrets/cloudsql-service-account.json`; do not commit or paste this file into Git.
+4. Set `CLOUD_SQL_INSTANCE` to the instance connection name (`project-id:region:instance-id`), and set `DB_NAME`, `DB_USER`, and `DB_PASSWORD` to the Cloud SQL database credentials. `DB_HOST` and `DB_PORT` are not used by this profile.
+5. After the secret file and variables are present, set `SPRING_PROFILES_ACTIVE` to `prod,cloudsql` and redeploy. The `cloudsql` profile uses the Google connector with `ipTypes=PUBLIC`; it does not rely on the Render PostgreSQL host.
+
+Do not grant the service account broader roles than required, and never share its JSON key or the database password in chat or source control. The Render Blueprint keeps `prod` as the default profile so existing deployments continue to use their configured PostgreSQL host until Cloud SQL credentials are installed and the profile is explicitly switched.
+
+### Run the backend container against Cloud SQL from Docker Desktop
+
+Cloud SQL is a managed database; Docker Desktop does not start a local copy of it. The optional `docker-compose.cloudsql.yml` override runs the backend container with the Cloud SQL connector and leaves the database in Google Cloud.
+
+1. Install the Google Cloud CLI and run `gcloud auth application-default login` with an account that has the `Cloud SQL Client` role on the instance's project. The Cloud SQL Admin API must be enabled.
+2. Create a root `.env` file (it is ignored by Git) with the Cloud SQL connection name, database name, user, password, and the full Windows path to the ADC credentials file:
+
+   ```dotenv
+   CLOUD_SQL_INSTANCE=project-id:region:instance-id
+   DB_NAME=database-name
+   DB_USER=database-user
+   DB_PASSWORD=replace-with-database-password
+   GOOGLE_APPLICATION_CREDENTIALS_FILE=C:\Users\your-user\AppData\Roaming\gcloud\application_default_credentials.json
+   ```
+
+3. Ensure the instance has a public IP, then start the backend from the `giro-app` directory in PowerShell:
+
+   ```powershell
+   docker compose -f docker-compose.yml -f docker-compose.cloudsql.yml up --build backend
+   ```
+
+   The Cloud SQL Compose override also starts RabbitMQ for the backend. Set `RABBITMQ_DEFAULT_USER` and `RABBITMQ_DEFAULT_PASS` in `.env` to unique local development credentials before starting it. The ADC credentials file is mounted read-only and is not copied into the image. Keep `.env` and all credential files out of source control. To stop the containers, press `Ctrl+C`; remove containers with `docker compose -f docker-compose.yml -f docker-compose.cloudsql.yml down`. The Cloud SQL database and its data are not removed by these commands.
 
 ## Getting Started
 

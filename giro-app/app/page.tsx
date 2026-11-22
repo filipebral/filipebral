@@ -7,7 +7,7 @@ export default function Home() {
   const router = useRouter();
   const [isRegistering, setIsRegistering] = useState(false);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,11 @@ export default function Home() {
       const response = await fetch(`/api/auth/${isRegistering ? "register" : "login"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, ...(isRegistering ? { name } : {}) }),
+        body: JSON.stringify({
+          cpf: cpf.replace(/\D/g, ""),
+          password,
+          ...(isRegistering ? { name } : {}),
+        }),
       });
       const result = await response.json();
       if (!response.ok) {
@@ -68,8 +72,25 @@ export default function Home() {
               </div>
             )}
             <div>
-              <label htmlFor="email" className="block text-xs font-medium uppercase tracking-wider text-zinc-400 mb-1.5">E-mail</label>
-              <input id="email" type="email" required maxLength={254} autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="w-full bg-[#18181b] border border-white/10 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-[#00FF66] text-sm" />
+              <label htmlFor="cpf" className="block text-xs font-medium uppercase tracking-wider text-zinc-400 mb-1.5">CPF</label>
+              <input
+                id="cpf"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                required
+                maxLength={14}
+                value={cpf}
+                onChange={(event) => {
+                  const digits = event.target.value.replace(/\D/g, "").slice(0, 11);
+                  const formatted = digits
+                    .replace(/^(\d{3})(\d)/, "$1.$2")
+                    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+                    .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+                  setCpf(formatted);
+                }}
+                className="w-full bg-[#18181b] border border-white/10 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-[#00FF66] text-sm"
+              />
             </div>
             <div>
               <label htmlFor="password" className="block text-xs font-medium uppercase tracking-wider text-zinc-400 mb-1.5">Senha</label>

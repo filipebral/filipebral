@@ -1,0 +1,42 @@
+services:
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod,cloudsql
+      CLOUD_SQL_INSTANCE: ${CLOUD_SQL_INSTANCE:?Set CLOUD_SQL_INSTANCE in .env}
+      DB_NAME: ${DB_NAME:?Set DB_NAME in .env}
+      DB_USER: ${DB_USER:?Set DB_USER in .env}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      GIRO_JWT_SECRET_BASE64: ${GIRO_JWT_SECRET_BASE64:?Set GIRO_JWT_SECRET_BASE64 in the host environment}
+      GIRO_ENCRYPTION_KEY_BASE64: ${GIRO_ENCRYPTION_KEY_BASE64:?Set GIRO_ENCRYPTION_KEY_BASE64 in the host environment}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/cloudsql-credentials.json
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
+    volumes:
+      - type: bind
+        source: ${GOOGLE_APPLICATION_CREDENTIALS_FILE:?Set GOOGLE_APPLICATION_CREDENTIALS_FILE in .env}
+        target: /run/secrets/cloudsql-credentials.json
+        read_only: true
+    depends_on:
+      rabbitmq:
+        condition: service_started
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    networks:
+      - giro-network
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  rabbitmq_data:
+
+networks:
+  giro-network:
+    driver: bridge

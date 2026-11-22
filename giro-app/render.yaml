@@ -20,6 +20,10 @@ services:
         sync: false
       - key: DB_PASSWORD
         sync: false
+      - key: CLOUD_SQL_INSTANCE
+        sync: false
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/cloudsql-service-account.json
       - key: GIRO_JWT_SECRET_BASE64
         sync: false
       - key: GIRO_ENCRYPTION_KEY_BASE64
