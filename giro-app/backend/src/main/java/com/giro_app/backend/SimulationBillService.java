@@ -16,11 +16,14 @@ public class SimulationBillService {
     private final SimulationAccountRepository accounts;
     private final SimulationBillRepository bills;
     private final SimulationService operations;
+    private final AuditEventRepository auditEvents;
 
-    public SimulationBillService(SimulationAccountRepository accounts, SimulationBillRepository bills, SimulationService operations) {
+    public SimulationBillService(SimulationAccountRepository accounts, SimulationBillRepository bills,
+            SimulationService operations, AuditEventRepository auditEvents) {
         this.accounts = accounts;
         this.bills = bills;
         this.operations = operations;
+        this.auditEvents = auditEvents;
     }
 
     @Transactional
@@ -37,7 +40,9 @@ public class SimulationBillService {
             }
             return BillView.from(bill);
         }
-        return BillView.from(bills.save(new SimulationBill(userId, requestId, name, amount, dueDate)));
+        SimulationBill bill = bills.save(new SimulationBill(userId, requestId, name, amount, dueDate));
+        auditEvents.save(new AuditEvent(userId, "SIMULATION_BILL_CREATED", bill.getId()));
+        return BillView.from(bill);
     }
 
     @Transactional(readOnly = true)
@@ -52,6 +57,7 @@ public class SimulationBillService {
         if ("PAID".equals(bill.getStatus())) return BillView.from(bill);
         operations.operate(userId, bill.getExecutionId(), bill.getAmount(), "BILL", bill.getDescription());
         bill.setStatus("PAID");
+        auditEvents.save(new AuditEvent(userId, "SIMULATION_BILL_PAID", bill.getId()));
         return BillView.from(bill);
     }
 

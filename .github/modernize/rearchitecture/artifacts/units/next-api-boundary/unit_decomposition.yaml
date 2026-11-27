@@ -1,0 +1,7 @@
+unit: next-api-boundary
+commit: false
+candidate_splits:
+  - id: giro-app/proxy.ts:6-43
+    drivers: [concern_split, nfr_split]
+    rationale: "Cryptographic token validation and request forwarding/origin checks are separate security responsibilities with different failure handling."
+    source_slice: {file: giro-app/proxy.ts, lines: [6, 43]}

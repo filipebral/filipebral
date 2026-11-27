@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type Account = { balance: number };
-type Transaction = { id: string; type: "CREDIT" | "PIX" | "TRANSFER" | "BILL"; amount: number; description: string; createdAt: string };
+type Account = { balance: number; reservedBalance: number; availableBalance: number };
+type Transaction = { id: string; type: "CREDIT" | "PIX" | "TRANSFER" | "BILL" | "CARD_DEBIT" | "CARD_BILL"; amount: number; description: string; createdAt: string };
+type History = { items: Transaction[]; page: number; hasNext: boolean };
 type Schedule = { id: string; amount: number; destination: string; scheduledAt: string; status: "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED" };
 type Bill = { id: string; description: string; amount: number; dueDate: string; status: "PENDING" | "PAID" };
 type PendingOperation = { signature: string; requestId: string };
+type Reconciliation = { id: string; requestId: string; status: "UNKNOWN" | "COMPLETED" | "STOPPED"; transactionId: string | null };
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const scheduleStatus: Record<Schedule["status"], string> = {
   PENDING: "Pendente", COMPLETED: "Concluído", FAILED: "Falhou: saldo fictício insuficiente", CANCELLED: "Cancelado",
@@ -21,12 +23,16 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json();
 }
 
-export default function SimulationPanel() {
+export default function SimulationPanel({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
   const [available, setAvailable] = useState<boolean | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [hasMoreHistory, setHasMoreHistory] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [reconciliation, setReconciliation] = useState<Reconciliation[]>([]);
   const [amount, setAmount] = useState("");
   const [destination, setDestination] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -37,14 +43,20 @@ export default function SimulationPanel() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const pending = useRef<PendingOperation | null>(null);
+  const historyGeneration = useRef(0);
 
   const refresh = useCallback(async () => {
+    const generation = ++historyGeneration.current;
     const response = await fetch("/api/proxy/simulation/account", { cache: "no-store" });
     if (response.status === 404) {
+      if (generation !== historyGeneration.current) return;
       setAccount(null);
       setTransactions([]);
+      setHistoryPage(0);
+      setHasMoreHistory(false);
       setSchedules([]);
       setBills([]);
+      setReconciliation([]);
       return;
     }
     if (!response.ok) {
@@ -52,11 +64,15 @@ export default function SimulationPanel() {
       throw new Error(body?.message || "Não foi possível consultar a conta simulada.");
     }
     const current: Account = await response.json();
-    const [statement, upcoming, billList] = await Promise.all([api<Transaction[]>("statement"), api<Schedule[]>("schedules"), api<Bill[]>("bills")]);
+    const [history, upcoming, billList, checks] = await Promise.all([api<History>("history?page=0&size=50"), api<Schedule[]>("schedules"), api<Bill[]>("bills"), api<Reconciliation[]>("reconciliation")]);
+    if (generation !== historyGeneration.current) return;
     setAccount(current);
-    setTransactions(statement);
+    setTransactions(history.items);
+    setHistoryPage(history.page);
+    setHasMoreHistory(history.hasNext);
     setSchedules(upcoming);
     setBills(billList);
+    setReconciliation(checks);
   }, []);
 
   useEffect(() => {
@@ -75,13 +91,34 @@ export default function SimulationPanel() {
       }
     }
     void load();
-  }, [refresh]);
+  }, [refresh, refreshKey]);
+
+  async function loadMoreHistory() {
+    setLoadingHistory(true);
+    setError(null);
+    const generation = historyGeneration.current;
+    try {
+      const history = await api<History>(`history?page=${historyPage + 1}&size=50`);
+      if (generation !== historyGeneration.current) return;
+      setTransactions((current) => {
+        const existing = new Set(current.map((item) => item.id));
+        return [...current, ...history.items.filter((item) => !existing.has(item.id))];
+      });
+      setHistoryPage(history.page);
+      setHasMoreHistory(history.hasNext);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível carregar o histórico simulado.");
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
 
   async function createAccount() {
     setBusy(true);
     setError(null);
     try {
       await api<Account>("account", { method: "POST" });
+      onChanged();
       await refresh();
       setNotice("Conta simulada criada com saldo fictício zerado.");
     } catch (caught) {
@@ -116,11 +153,18 @@ export default function SimulationPanel() {
     }
     setBusy(true);
     try {
+      const check = type === "schedule" ? null : await api<Reconciliation>("reconciliation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId: pending.current.requestId }),
+      });
       await api(type === "schedule" ? "schedules" : type, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId: pending.current.requestId, ...operation }),
       });
+      if (check) await api(`reconciliation/${check.id}/check`, { method: "POST" });
+      onChanged();
       await refresh();
       pending.current = null;
       setAmount("");
@@ -128,7 +172,31 @@ export default function SimulationPanel() {
       setScheduledAt("");
       setNotice(type === "credit" ? "Saldo fictício adicionado." : type === "schedule" ? "Pix simulado agendado." : "Operação simulada registrada; nenhum dinheiro foi enviado.");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Falha na operação simulada.");
+      const message = caught instanceof Error ? caught.message : "Não foi possível confirmar a operação simulada.";
+      const reference = pending.current?.requestId;
+      if (type === "schedule") {
+        setError(`${message} Consulte os agendamentos antes de tentar novamente. Referência: ${reference}.`);
+      } else {
+        setError(`${message} Confira a consulta antes de tentar novamente; resultado desconhecido não significa falha. Referência: ${reference}.`);
+        try {
+          setReconciliation(await api<Reconciliation[]>("reconciliation"));
+        } catch {
+          setError(`Não foi possível confirmar o resultado ou atualizar a fila. Preserve a referência ${reference} e não suponha que a operação falhou.`);
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function updateCheck(id: string, action: "check" | "stop") {
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`reconciliation/${id}/${action}`, { method: "POST" });
+      await refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível atualizar a consulta simulada.");
     } finally {
       setBusy(false);
     }
@@ -139,6 +207,7 @@ export default function SimulationPanel() {
     setError(null);
     try {
       await api(`schedules/${id}/cancel`, { method: "POST" });
+      onChanged();
       await refresh();
       setNotice("Agendamento simulado cancelado.");
     } catch (caught) {
@@ -165,6 +234,7 @@ export default function SimulationPanel() {
     try {
       await api("bills", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId: pending.current.requestId, ...operation }) });
+      onChanged();
       await refresh();
       pending.current = null;
       setBillDescription("");
@@ -184,6 +254,7 @@ export default function SimulationPanel() {
     setNotice(null);
     try {
       await api(`bills/${id}/pay`, { method: "POST" });
+      onChanged();
       await refresh();
       setNotice("Pagamento simulado registrado; nenhum dinheiro foi enviado.");
     } catch (caught) {
@@ -212,8 +283,9 @@ export default function SimulationPanel() {
       ) : (
         <>
           <div>
-            <p className="text-xs text-zinc-400">Saldo fictício</p>
-            <p className="text-2xl font-bold">{currency.format(account.balance)}</p>
+            <p className="text-xs text-zinc-400">Saldo fictício disponível</p>
+            <p className="text-2xl font-bold">{currency.format(account.availableBalance)}</p>
+            <p className="mt-1 text-[10px] text-zinc-500">Total fictício: {currency.format(account.balance)} · Reservado em metas: {currency.format(account.reservedBalance)}</p>
           </div>
           <form onSubmit={(event) => { event.preventDefault(); void operate("credit"); }} className="space-y-3">
             <label htmlFor="simulation-amount" className="block text-xs text-zinc-400">Valor fictício em reais</label>
@@ -230,18 +302,34 @@ export default function SimulationPanel() {
             <button type="button" disabled={busy} onClick={() => void operate("schedule")} className="w-full border border-white/20 py-3 rounded-2xl text-xs font-bold disabled:opacity-50">Agendar Pix simulado</button>
           </form>
           <div>
+            <h3 className="text-sm font-bold">Consultas de operações simuladas</h3>
+            <p className="mt-1 text-xs text-zinc-500">Resultado desconhecido não significa falha. Parar a consulta não cancela uma operação.</p>
+            {reconciliation.length === 0 ? <p className="mt-2 text-xs text-zinc-500">Nenhuma consulta registrada.</p> : (
+              <ul className="mt-2 space-y-3">{reconciliation.map((item) => (
+                <li key={item.id} className="text-xs text-zinc-300 break-all">
+                  <p>{item.status === "COMPLETED" ? "Concluída" : item.status === "STOPPED" ? "Consulta parada" : "Resultado desconhecido"} · {item.requestId}</p>
+                  {item.status === "UNKNOWN" && <div className="mt-1 flex gap-3">
+                    <button type="button" disabled={busy} onClick={() => void updateCheck(item.id, "check")} className="text-[#00FF66] underline disabled:opacity-50">Consultar novamente</button>
+                    <button type="button" disabled={busy} onClick={() => void updateCheck(item.id, "stop")} className="text-amber-300 underline disabled:opacity-50">Parar consulta</button>
+                  </div>}
+                </li>
+              ))}</ul>
+            )}
+          </div>
+          <div>
             <h3 className="text-sm font-bold">Extrato simulado</h3>
-            <p className="text-xs text-zinc-500 mt-1">Últimas 50 operações fictícias.</p>
+            <p className="text-xs text-zinc-500 mt-1">Histórico de operações fictícias.</p>
             {transactions.length === 0 ? <p className="text-xs text-zinc-500 mt-3">Nenhuma operação simulada.</p> : (
               <ul className="mt-3 space-y-3">
                 {transactions.map((transaction) => (
                   <li key={transaction.id} className="flex justify-between gap-3 text-xs">
-                    <span><span className="block text-zinc-200">{transaction.type === "CREDIT" ? transaction.description : `${transaction.type === "PIX" ? "Pix para" : transaction.type === "BILL" ? "Boleto fictício:" : "Transferência para"} ${transaction.description}`}</span><span className="text-zinc-500">{new Date(transaction.createdAt).toLocaleString("pt-BR")}</span><details className="mt-1 text-zinc-400"><summary>Comprovante simulado</summary><p>Nenhum dinheiro foi movimentado.</p><p>Identificador: {transaction.id}</p><p>Valor fictício: {currency.format(transaction.amount)}</p></details></span>
+                    <span><span className="block text-zinc-200">{transaction.type === "CREDIT" ? transaction.description : `${transaction.type === "PIX" ? "Pix para" : transaction.type === "BILL" ? "Boleto fictício:" : transaction.type === "CARD_DEBIT" ? "Compra no débito:" : transaction.type === "CARD_BILL" ? "Fatura simulada:" : "Transferência para"} ${transaction.description}`}</span><span className="text-zinc-500">{new Date(transaction.createdAt).toLocaleString("pt-BR")}</span><details className="mt-1 text-zinc-400"><summary>Comprovante simulado</summary><p>Nenhum dinheiro foi movimentado.</p><p>Identificador: {transaction.id}</p><p>Valor fictício: {currency.format(transaction.amount)}</p></details></span>
                     <span className={transaction.type !== "CREDIT" ? "text-red-400" : "text-emerald-400"}>{transaction.type !== "CREDIT" ? "-" : "+"}{currency.format(transaction.amount)}</span>
                   </li>
                 ))}
               </ul>
             )}
+            {hasMoreHistory && <button type="button" disabled={loadingHistory} onClick={() => void loadMoreHistory()} className="mt-3 text-xs text-[#00FF66] underline disabled:opacity-50">{loadingHistory ? "Carregando..." : "Ver mais operações"}</button>}
           </div>
           <div>
             <h3 className="text-sm font-bold">Agendamentos simulados</h3>

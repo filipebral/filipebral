@@ -1,0 +1,11 @@
+unit: next-dashboard-experience
+commit: false
+candidate_splits:
+  - id: giro-app/components/SimulationPanel.tsx:24-244
+    drivers: [concern_split, lifecycle_split]
+    rationale: "Simulation ledger, schedule lifecycle, and bill lifecycle are separate concerns with distinct status models and actions."
+    source_slice: {file: giro-app/components/SimulationPanel.tsx, lines: [24, 244]}
+  - id: giro-app/components/FinancialSimulators.tsx:13-83
+    drivers: [concern_split, reuse_split]
+    rationale: "Calculator interaction and deterministic calculation library can evolve independently and may be reused outside the dashboard."
+    source_slice: {file: giro-app/components/FinancialSimulators.tsx, lines: [13, 83]}

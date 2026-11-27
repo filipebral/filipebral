@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -22,18 +23,23 @@ public class AuthService {
 
     private final AppUserRepository users;
     private final PasswordEncoder passwordEncoder;
+    private final String dummyPasswordHash;
     private final JwtEncoder jwtEncoder;
     private final CpfLookupHashService cpfLookupHashService;
+    private final ObjectProvider<TaxRegistrationVerificationPort> taxVerification;
 
     public AuthService(
             AppUserRepository users,
             PasswordEncoder passwordEncoder,
             JwtEncoder jwtEncoder,
-            CpfLookupHashService cpfLookupHashService) {
+            CpfLookupHashService cpfLookupHashService,
+            ObjectProvider<TaxRegistrationVerificationPort> taxVerification) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
+        this.dummyPasswordHash = passwordEncoder.encode("giro-nonexistent-account-timing-padding");
         this.jwtEncoder = jwtEncoder;
         this.cpfLookupHashService = cpfLookupHashService;
+        this.taxVerification = taxVerification;
     }
 
     @Transactional
@@ -42,6 +48,17 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A senha excede o limite seguro de 72 bytes.");
         }
         String cpf = normalizeCpf(request.cpf());
+        TaxRegistrationVerificationPort verifier = taxVerification.getIfAvailable();
+        if (verifier == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Cadastro indisponível: verificação cadastral não configurada.");
+        }
+        TaxRegistrationVerificationPort.Status status = verifier.verifyCpf(cpf, request.birthDate());
+        if (status == null || status == TaxRegistrationVerificationPort.Status.UNAVAILABLE) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Cadastro indisponível: não foi possível verificar o CPF.");
+        }
+        if (status != TaxRegistrationVerificationPort.Status.REGULAR) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Não foi possível confirmar um CPF regular com os dados informados.");
+        }
         String cpfLookupHash = cpfLookupHashService.hash(cpf);
         if (users.existsByCpfLookupHash(cpfLookupHash)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Não foi possível concluir o cadastro com esses dados.");
@@ -61,11 +78,13 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos.");
         }
         String cpf = normalizeCpf(request.cpf());
-        AppUser user = users.findByCpfLookupHash(cpfLookupHashService.hash(cpf))
-                .filter(candidate -> passwordEncoder.matches(request.password(), candidate.getPasswordHash()))
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED, "CPF ou senha inválidos."));
-        return issueToken(user);
+        var candidate = users.findByCpfLookupHash(cpfLookupHashService.hash(cpf));
+        String hash = candidate.map(AppUser::getPasswordHash).orElse(dummyPasswordHash);
+        boolean matches = passwordEncoder.matches(request.password(), hash);
+        if (candidate.isEmpty() || !matches) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "CPF ou senha inválidos.");
+        }
+        return issueToken(candidate.orElseThrow());
     }
 
     private AuthResponseDTO issueToken(AppUser user) {

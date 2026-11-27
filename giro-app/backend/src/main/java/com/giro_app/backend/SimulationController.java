@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -22,11 +23,14 @@ public class SimulationController {
     private final SimulationService service;
     private final SimulationScheduleService schedules;
     private final SimulationBillService bills;
+    private final SimulationCardService cards;
 
-    public SimulationController(SimulationService service, SimulationScheduleService schedules, SimulationBillService bills) {
+    public SimulationController(SimulationService service, SimulationScheduleService schedules,
+            SimulationBillService bills, SimulationCardService cards) {
         this.service = service;
         this.schedules = schedules;
         this.bills = bills;
+        this.cards = cards;
     }
 
     @GetMapping("/status")
@@ -47,6 +51,17 @@ public class SimulationController {
     @GetMapping("/statement")
     public List<SimulationService.TransactionView> statement(@AuthenticationPrincipal Jwt principal) {
         return service.statement(userId(principal));
+    }
+
+    @GetMapping("/history")
+    public SimulationService.HistoryView history(@AuthenticationPrincipal Jwt principal,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "50") int size) {
+        return service.history(userId(principal), page, size);
+    }
+
+    @GetMapping("/operations/{requestId}")
+    public SimulationService.TransactionView operation(@AuthenticationPrincipal Jwt principal, @PathVariable UUID requestId) {
+        return service.operation(userId(principal), requestId);
     }
 
     @PostMapping("/credit")
@@ -102,4 +117,60 @@ public class SimulationController {
     public record ScheduleRequest(UUID requestId, BigDecimal amount, String destination, Instant scheduledAt) {}
     public record BillRequest(UUID requestId, String description, BigDecimal amount, LocalDate dueDate) {}
     public record Status(boolean simulated) {}
+
+    @GetMapping("/card")
+    public SimulationCardService.CardView card(@AuthenticationPrincipal Jwt principal) {
+        return cards.get(userId(principal));
+    }
+
+    @PostMapping("/card")
+    public SimulationCardService.CardView issueCard(@AuthenticationPrincipal Jwt principal, @RequestBody CardSetup request) {
+        return cards.issue(userId(principal), request.creditLimit());
+    }
+
+    @PostMapping("/card/block")
+    public SimulationCardService.CardView blockCard(@AuthenticationPrincipal Jwt principal) {
+        return cards.setBlocked(userId(principal), true);
+    }
+
+    @PostMapping("/card/unblock")
+    public SimulationCardService.CardView unblockCard(@AuthenticationPrincipal Jwt principal) {
+        return cards.setBlocked(userId(principal), false);
+    }
+
+    @PostMapping("/card/report-loss")
+    public SimulationCardService.CardView reportCardLoss(@AuthenticationPrincipal Jwt principal) {
+        return cards.reportIssue(userId(principal), "perda");
+    }
+
+    @PostMapping("/card/report-fraud")
+    public SimulationCardService.CardView reportCardFraud(@AuthenticationPrincipal Jwt principal) {
+        return cards.reportIssue(userId(principal), "suspeita de fraude");
+    }
+
+    @PostMapping("/card/purchases")
+    public SimulationCardService.CardTransactionView cardPurchase(
+            @AuthenticationPrincipal Jwt principal, @RequestBody CardPurchase request) {
+        return cards.purchase(userId(principal), request.requestId(), request.kind(), request.amount(), request.description());
+    }
+
+    @GetMapping("/card/transactions")
+    public List<SimulationCardService.CardTransactionView> cardTransactions(@AuthenticationPrincipal Jwt principal) {
+        return cards.transactions(userId(principal));
+    }
+
+    @GetMapping("/card/statements")
+    public List<SimulationCardService.StatementView> cardStatements(@AuthenticationPrincipal Jwt principal) {
+        return cards.listStatements(userId(principal));
+    }
+
+    @PostMapping("/card/statements/{month}/pay")
+    public SimulationCardService.StatementView payCardStatement(
+            @AuthenticationPrincipal Jwt principal, @PathVariable String month, @RequestBody PayStatement request) {
+        return cards.pay(userId(principal), month, request.requestId());
+    }
+
+    public record CardSetup(BigDecimal creditLimit) {}
+    public record CardPurchase(UUID requestId, String kind, BigDecimal amount, String description) {}
+    public record PayStatement(UUID requestId) {}
 }

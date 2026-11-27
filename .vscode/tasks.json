@@ -1,0 +1,101 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Iniciar aplicação Giro",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/d",
+				"/c",
+				"cd /d \"giro-app\" && npm run dev"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Iniciar frontend Giro",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/d",
+				"/c",
+				"cd /d giro-app && npm run dev"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Frontend Giro - Porta 3000",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/d",
+				"/c",
+				"cd /d \"C:\\Users\\filip\\Área de Trabalho\\Projeto Banco\\giro-app\\giro-app\" && npm run dev -- --hostname 0.0.0.0"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Frontend Giro - Porta 3022",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/d",
+				"/c",
+				"cd /d \"C:\\Users\\filip\\Área de Trabalho\\Projeto Banco\\giro-app\\giro-app\" && npm run dev -- --hostname 0.0.0.0 --port 3022"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Diagnóstico frontend Giro",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/d",
+				"/v:on",
+				"/c",
+				"cd /d \"C:\\Users\\filip\\Área de Trabalho\\Projeto Banco\\giro-app\\giro-app\" && echo Diretório=%CD% && node --version && npm --version && npx next dev --hostname 127.0.0.1 --port 3022"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Next direto - Porta 3022",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"C:\\Users\\filip\\Área de Trabalho\\Projeto Banco\\giro-app\\giro-app\\node_modules\\next\\dist\\bin\\next",
+				"dev",
+				"C:\\Users\\filip\\Área de Trabalho\\Projeto Banco\\giro-app\\giro-app",
+				"--hostname",
+				"127.0.0.1",
+				"--port",
+				"3022"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run Giro backend with H2",
+			"type": "shell",
+			"command": "cmd.exe",
+			"args": [
+				"/d",
+				"/c",
+				"cd /d \"C:\\Users\\filip\\Área de Trabalho\\Projeto Banco\\giro-app\\backend\" && mvnw.cmd spring-boot:run \"-Dspring-boot.run.arguments=--spring.datasource.url=jdbc:h2:mem:giro;MODE=PostgreSQL;DB_CLOSE_DELAY=-1 --spring.datasource.username=sa --spring.datasource.password= --spring.jpa.database-platform=org.hibernate.dialect.H2Dialect --spring.jpa.hibernate.ddl-auto=validate --spring.flyway.enabled=true --spring.flyway.locations=classpath:db/migration --app.security.jwt.secret-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= --app.security.encryption.key-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= --BAAS_ENABLED=false\""
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

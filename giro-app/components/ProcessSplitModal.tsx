@@ -18,9 +18,10 @@ interface SplitResult {
 interface ProcessSplitModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess: () => void;
 }
 
-export default function ProcessSplitModal({ isOpen, onClose }: ProcessSplitModalProps) {
+export default function ProcessSplitModal({ isOpen, onClose, onSuccess }: ProcessSplitModalProps) {
   const [splitGroupId, setSplitGroupId] = useState("");
   const [totalAmount, setTotalAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -54,6 +55,7 @@ export default function ProcessSplitModal({ isOpen, onClose }: ProcessSplitModal
       }
 
       setResult(data);
+      onSuccess();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erro de comunicação com o servidor.");
     } finally {

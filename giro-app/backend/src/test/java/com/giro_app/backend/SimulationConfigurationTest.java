@@ -17,10 +17,15 @@ class SimulationConfigurationTest {
             context.getEnvironment().setActiveProfiles("prod");
             context.getEnvironment().getPropertySources().addFirst(
                     new MapPropertySource("test", Map.of("app.simulation.enabled", "false")));
-            context.register(SimulationController.class, SimulationService.class);
+            context.register(SimulationController.class, SimulationService.class,
+                    SimulationReconciliationController.class, SimulationReconciliationService.class,
+                    SimulationReconciliationScheduler.class);
             context.refresh();
             assertFalse(context.containsBeanDefinition("simulationController"));
             assertFalse(context.containsBeanDefinition("simulationService"));
+            assertFalse(context.containsBeanDefinition("simulationReconciliationController"));
+            assertFalse(context.containsBeanDefinition("simulationReconciliationService"));
+            assertFalse(context.containsBeanDefinition("simulationReconciliationScheduler"));
         }
     }
 
@@ -30,6 +35,7 @@ class SimulationConfigurationTest {
         try (var connection = DriverManager.getConnection(url, "sa", "");
              var statement = connection.createStatement()) {
             statement.execute("CREATE TABLE app_users (id UUID PRIMARY KEY)");
+            statement.execute("CREATE TABLE split_transactions (id UUID PRIMARY KEY)");
         }
         Flyway flyway = Flyway.configure()
                 .dataSource(url, "sa", "")
@@ -37,7 +43,7 @@ class SimulationConfigurationTest {
                 .baselineOnMigrate(true)
                 .baselineVersion("3")
                 .load();
-        assertEquals(3, flyway.migrate().migrationsExecuted);
-        assertEquals("6", flyway.info().current().getVersion().getVersion());
+        assertEquals(12, flyway.migrate().migrationsExecuted);
+        assertEquals("15", flyway.info().current().getVersion().getVersion());
     }
 }

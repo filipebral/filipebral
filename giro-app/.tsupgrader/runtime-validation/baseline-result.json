@@ -1,0 +1,111 @@
+{
+  "planHash": "f0f5446250af727d403d1ce9e62e78ee2f715d9b657973805bea4a1b60b28b43",
+  "phase": "baseline",
+  "recordedAtUtc": "2026-11-23T04:17:13.0483213Z",
+  "retryCount": 0,
+  "resetBaseline": false,
+  "complete": true,
+  "result": {
+    "setupSucceeded": true,
+    "setupDurationMs": 176924,
+    "setupFailureOutput": null,
+    "assertions": [
+      {
+        "name": "frontend-build",
+        "kind": "process",
+        "verificationMethod": "exit-code",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "npm notice run giro-app@0.1.0 build\r\nnpm notice run next build\r\n\u25B2 Next.js 16.3.8 (Turbopack)\r\n- Environments: .env\r\n\u2713 Running next.config.mjs took 37ms\r\n\r\n  Creating an optimized production build ...\r\n\u2713 Compiled successfully in 6.2s\r\n  Running TypeScript ...\r\n  Finished TypeScript in 4.3s ...\r\n  Collecting page data using 7 workers ...\r\n  Generating static pages using 7 workers (0/8) ...\r\n  Generating static pages using 7 workers (2/8) \r\n  Generating static pages using 7 workers (4/8) \r\n  Generating static pages using 7 workers (6/8) \r\n\u2713 Generating static pages using 7 workers (8/8) in 1650ms\r\n  Finalizing page optimization ...\r\n\r\nRoute (app)\r\n\u250C \u25CB /\r\n\u251C \u25CB /_not-found\r\n\u251C \u0192 /api/auth/login\r\n\u251C \u0192 /api/auth/logout\r\n\u251C \u0192 /api/auth/register\r\n\u251C \u0192 /api/proxy/[...path]\r\n\u2514 \u25CB /dashboard\r\n\r\n\r\n\u0192 Proxy (Middleware)\r\n\r\n\u25CB  (Static)   prerendered as static content\r\n\u0192  (Dynamic)  server-rendered on demand\r\n\r\n",
+        "durationMs": 28941
+      },
+      {
+        "name": "tests-pass",
+        "kind": "process",
+        "verificationMethod": "test-results",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "npm notice run giro-app@0.1.0 test\r\nnpm notice run node --test lib/*.test.mjs\r\n(node:28156) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/filip/%C3%81rea%20de%20Trabalho/Projeto%20Banco/giro-app/giro-app/lib/financial-simulations.ts is not specified and it doesn\u0027t parse as CommonJS.\r\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\r\nTo eliminate this warning, add \u0022type\u0022: \u0022module\u0022 to \\\\?\\C:\\Users\\filip\\\u00C1rea de Trabalho\\Projeto Banco\\giro-app\\giro-app\\package.json.\r\n(Use \u0060node --trace-warnings ...\u0060 to show where the warning was created)\r\n\u2714 loan supports zero and positive monthly interest (3.0832ms)\r\n\u2714 investment compounds monthly contributions at the end of each month (0.3489ms)\r\n\u2714 simulators reject invalid inputs and excessively large results (0.8589ms)\r\n\u2139 tests 3\r\n\u2139 suites 0\r\n\u2139 pass 3\r\n\u2139 fail 0\r\n\u2139 cancelled 0\r\n\u2139 skipped 0\r\n\u2139 todo 0\r\n\u2139 duration_ms 456.1524\r\n",
+        "durationMs": 2490,
+        "testResults": {
+          "testFramework": "unknown",
+          "runnerDetectedFrom": "none",
+          "testsTotal": 0,
+          "testsPassed": 0,
+          "testsFailed": 0,
+          "testsSkipped": 0,
+          "parseFailed": true
+        }
+      },
+      {
+        "name": "home-route-200",
+        "kind": "http-probe",
+        "verificationMethod": "http-status",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": null,
+        "outputSample": "HTTP 200\n\u003C!DOCTYPE html\u003E\u003Chtml lang=\u0022pt-BR\u0022\u003E\u003Chead\u003E\u003Cmeta charSet=\u0022utf-8\u0022/\u003E\u003Cmeta name=\u0022viewport\u0022 content=\u0022width=device-width, initial-scale=1\u0022/\u003E\u003Clink rel=\u0022stylesheet\u0022 href=\u0022/_next/static/chunks/app_globals_0yg4wg8.css\u0022 data-precedence=\u0022next_static/chunks/app_globals_0yg4wg8.css\u0022/\u003E\u003Clink rel=\u0022preload\u0022 as=\u0022script\u0022 fetchPriority=\u0022low\u0022 href=\u0022/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_1di75ot._.js\u0022/\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_compiled_next-devtools_index_090k2jm.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_compiled_react-server-dom-turbopack_164kp-6._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_compiled_1amofcm._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_%40swc_helpers_cjs_1r9vbqw._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/_1anvha4._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/turbopack-_08bm286._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/_219uq1s._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_20wefz_._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/_1_6s5_w._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Ctitle\u003EGiro | O banco que acompanha o seu ritmo\u003C/title\u003E\u003Cmeta name=\u0022description\u0022 content=\u0022Acesso antecipado ao banco Giro.\u0022/\u003E\u003Clink rel=\u0022icon\u0022 href=\u0022/favicon.ico?favicon.2vob68tjqpejf.ico\u0022 sizes=\u0022256x256\u0022 type=\u0022image/x-icon\u0022/\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_build_polyfills_polyfill-nomodule.js\u0022 noModule=\u0022\u0022\u003E\u003C/script\u003E\u003C/head\u003E\u003Cbody\u003E\u003Cdiv hidden=\u0022\u0022\u003E\u003C!--$--\u003E\u003C!--/$--\u003E\u003C/div\u003E\u003Cdiv class=\u0022min-h-screen bg-[#09090b] text-zinc-100 flex flex-col justify-between selection:bg-[#00FF66] selection:text-black\u0022\u003E\u003Cheader class=\u0022w-full max-w-6xl mx-auto px-6 py-6 flex items-center\u0022\u003E\u003Cdiv class=\u0022flex items-center gap-2\u0022\u003E\u003Cdiv class=\u0022w-8 h-8 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/30 flex items-center justify-center text-[#00FF66] font-extrabold text-sm\u0022\u003EG\u003C/div\u003E\u003Cspan class=\u0022text-lg font-bold tracking-tight text-white\u0022\u003Egiro\u003Cspan class=\u0022text-[#00FF66]\u0022\u003E.\u003C/span\u003E\u003C/span\u003E\u003C/div\u003E\u003C/header\u003E\u003Cmain class=\u0022w-full max-w-md mx-auto px-4 py-8 flex flex-col items-center justify-center flex-1\u0022\u003E\u003Cdiv class=\u0022w-full bg-[#121214] border border-white/10 rounded-3xl p-8 shadow-2xl\u0022\u003E\u003Cdiv class=\u0022mb-6\u0022\u003E\u003Cspan class=\u0022text-xs font-semibold uppercase tracking-wider text-[#00FF66]\u0022\u003EAcesso seguro\u003C/span\u003E\u003Ch1 class=\u0022text-2xl font-extrabold text-white tracking-tight mt-1\u0022\u003EEntre na sua conta\u003C/h1\u003E\u003Cp class=\u0022text-xs text-zinc-400 mt-1\u0022\u003EUse suas credenciais para acessar o Giro.\u003C/p\u003E\u003C/div\u003E\u003Cform class=\u0022space-y-4\u0022\u003E\u003Cdiv\u003E\u003Clabel for=\u0022cpf\u0022 class=\u0022block text-xs font-medium uppercase tracking-wider text-zinc-400 mb-1.5\u0022\u003ECPF\u003C/label\u003E\u003Cinput id=\u0022cpf\u0022 type=\u0022text\u0022 inputMode=\u0022numeric\u0022 autoComplete=\u0022off\u0022 required=\u0022\u0022 maxLength=\u002214\u0022 class=\u0022w-full bg-[#18181b] border border-white/10 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-[#00FF66] text-sm\u0022 value=\u0022\u0022/\u003E\u003C/div\u003E\u003Cdiv\u003E\u003Clabel for=\u0022password\u0022 class=\u0022block text-xs font-medium uppercase tracking-wider text-zinc-400 mb-1.5\u0022\u003ESenha\u003C/label\u003E\u003Cinput id=\u0022password\u0022 type=\u0022password\u0022 required=\u0022\u0022 maxLength=\u002272\u0022 autoComplete=\u0022current-password\u0022 class=\u0022w-full bg-[#18181b] border border-white/10 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-[#00FF66] text-sm\u0022 value=\u0022\u0022/\u003E\u003C/div\u003E\u003Cbutton type=\u0022submit\u0022 class=\u0022w-full mt-2 bg-[#00FF66] hover:bg-[#00cc52] text-black py-3.5 px-4 rounded-2xl text-xs font-extrabold disabled:opacity-50\u0022\u003EEntrar\u003C/button\u003E\u003C/form\u003E\u003Cdiv class=\u0022mt-6 pt-6 border-t border-white/5 text-center text-xs text-zinc-500\u0022\u003EAinda n\u00E3o \u00E9 cliente?\u003C!-- --\u003E \u003Cbutton type=\u0022button\u0022 class=\u0022text-[#00FF66] font-semibold hover:underline\u0022\u003ECriar conta\u003C/button\u003E\u003C/div\u003E\u003C/div\u003E\u003C/main\u003E\u003Cfooter class=\u0022w-full max-w-6xl mx-auto px-6 py-6 bord\n\u2026[truncated]",
+        "durationMs": 10298
+      }
+    ],
+    "executions": [
+      {
+        "source": "setup[0]",
+        "resolvedExecutable": "C:\\Users\\filip\\AppData\\Local\\Author Software\\nvm\\.nodejs\\npm.CMD",
+        "args": [
+          "ci"
+        ],
+        "cwd": "C:\\Users\\filip\\\u00C1rea de Trabalho\\Projeto Banco\\giro-app\\giro-app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "frontend-build",
+        "resolvedExecutable": "C:\\Users\\filip\\AppData\\Local\\Author Software\\nvm\\.nodejs\\npm.CMD",
+        "args": [
+          "run",
+          "build"
+        ],
+        "cwd": "C:\\Users\\filip\\\u00C1rea de Trabalho\\Projeto Banco\\giro-app\\giro-app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "tests-pass",
+        "resolvedExecutable": "C:\\Users\\filip\\AppData\\Local\\Author Software\\nvm\\.nodejs\\npm.CMD",
+        "args": [
+          "test"
+        ],
+        "cwd": "C:\\Users\\filip\\\u00C1rea de Trabalho\\Projeto Banco\\giro-app\\giro-app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "home-route-200",
+        "resolvedExecutable": "C:\\Users\\filip\\AppData\\Local\\Author Software\\nvm\\.nodejs\\npm.CMD",
+        "args": [
+          "run",
+          "dev",
+          "--",
+          "--port",
+          "3101"
+        ],
+        "cwd": "C:\\Users\\filip\\\u00C1rea de Trabalho\\Projeto Banco\\giro-app\\giro-app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      }
+    ]
+  }
+}

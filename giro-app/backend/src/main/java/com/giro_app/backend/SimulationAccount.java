@@ -17,11 +17,15 @@ public class SimulationAccount {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal balance;
 
+    @Column(name = "reserved_balance", nullable = false, precision = 19, scale = 2)
+    private BigDecimal reservedBalance;
+
     protected SimulationAccount() {}
 
     public SimulationAccount(UUID userId) {
         this.userId = userId;
         this.balance = BigDecimal.ZERO.setScale(2);
+        this.reservedBalance = BigDecimal.ZERO.setScale(2);
     }
 
     public BigDecimal getBalance() {
@@ -31,4 +35,8 @@ public class SimulationAccount {
     public void setBalance(BigDecimal balance) {
         this.balance = balance;
     }
+
+    public BigDecimal getReservedBalance() { return reservedBalance; }
+    public BigDecimal getAvailableBalance() { return balance.subtract(reservedBalance); }
+    public void setReservedBalance(BigDecimal reservedBalance) { this.reservedBalance = reservedBalance; }
 }

@@ -1,0 +1,27 @@
+unit: next-api-boundary
+bindings:
+  - type: route-declaration
+    name: "Next catch-all /api/proxy/[...path]"
+    source_loc: "giro-app/app/api/proxy/[...path]/route.ts:5"
+    target: "GET/POST/PUT/PATCH/DELETE"
+    must_appear_in_target: true
+    notes: "Backend path segments are encoded; query copied."
+  - type: interceptor
+    name: "Next proxy matcher /dashboard/:path*"
+    source_loc: "giro-app/proxy.ts:56"
+    target: "dashboard route access"
+    must_appear_in_target: true
+    notes: "Locally verifies HS256 signature, issuer, audience, subject, expiry."
+runtime_config:
+  - key: GIRO_BACKEND_URL
+    source_loc: "giro-app/app/api/proxy/[...path]/route.ts:4"
+    source: env
+    default_value: "http://localhost:8080"
+    must_appear_in_target: true
+    notes: "Backend origin."
+  - key: GIRO_JWT_SECRET_BASE64
+    source_loc: "giro-app/proxy.ts:8"
+    source: env
+    default_value: null
+    must_appear_in_target: true
+    notes: "Must match Spring HS256 validation key."

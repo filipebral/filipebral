@@ -1,0 +1,7 @@
+unit: backend-simulation-worker
+commit: false
+candidate_splits:
+  - id: giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduler.java:25-33
+    drivers: [execution_model_split, nfr_split]
+    rationale: "Poll selection and per-schedule execution have different failure isolation and scaling characteristics."
+    source_slice: {file: giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduler.java, lines: [25, 33]}

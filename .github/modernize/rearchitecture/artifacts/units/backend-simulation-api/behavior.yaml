@@ -1,0 +1,33 @@
+unit: backend-simulation-api
+side_effects:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationService.java:50"
+    effect: "Locks simulated account, atomically changes balance and inserts idempotent fictitious operation."
+    must_preserve: true
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduleService.java:28"
+    effect: "Creates future simulated Pix schedule with independent execution ID."
+    must_preserve: true
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationBillService.java:48"
+    effect: "Pays a simulated bill by creating an operation and marking bill PAID."
+    must_preserve: true
+branches:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationService.java:54"
+    condition: "Same user/requestId exists"
+    behavior: "Return current balance if type/amount/description match; 409 if payload differs."
+    must_preserve: true
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationService.java:64"
+    condition: "Debit would make balance negative or exceed max"
+    behavior: "Return 422 and do not persist."
+    must_preserve: true
+error_paths:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationService.java:78"
+    trigger: "Invalid amount, request ID, type, destination, or precision"
+    outcome: "400 with safe localized message."
+    contract: "GlobalExceptionHandler message."
+    must_preserve: true
+concurrency:
+  model: sync
+  tx_boundary:
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationService.java:50"
+    scope: "Pessimistic account lock, balance update, and transaction insert."
+    isolation: "database lock + default transaction isolation"
+    must_preserve: true

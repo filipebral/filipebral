@@ -1,0 +1,100 @@
+modules:
+  - name: security-cookie-contract
+    kind: config
+    source_loc: "giro-app/lib/auth-server.ts:3"
+    used_by_units:
+      - next-auth-experience
+      - next-auth-bff
+      - next-api-boundary
+      - backend-auth-api
+      - backend-account-provider-api
+      - backend-simulation-api
+      - backend-split-api
+    fields:
+      - name: access_cookie_name
+        type: "constant string = giro_access_token"
+      - name: token_lifetime
+        type: "seconds; 900 current"
+      - name: cookie_policy
+        type: "HttpOnly, SameSite=Lax, Path=/, Secure in production"
+      - name: jwt_claims
+        type: "{iss,sub,aud,iat,exp,name}; HS256"
+    god_class: false
+    split_candidate: false
+    migration_strategy: wrap
+    notes: "Single cross-language security contract; frontend and Spring encoders/validators must use the same secret and claims."
+  - name: user-persistence-contract
+    kind: store
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AppUser.java:10"
+    used_by_units:
+      - backend-auth-api
+      - backend-simulation-api
+    fields:
+      - name: user_id
+        type: UUID
+      - name: cpf_encrypted
+        type: String
+      - name: cpf_lookup_hash
+        type: String
+      - name: password_hash
+        type: String
+    god_class: false
+    split_candidate: false
+    migration_strategy: copy
+    notes: "Persisted identity shape is externally observed through JWT subject and must remain stable."
+  - name: simulation-domain-contract
+    kind: store
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationService.java:14"
+    used_by_units:
+      - next-dashboard-experience
+      - backend-simulation-api
+      - backend-simulation-worker
+    fields:
+      - name: account_balance
+        type: "{balance:BigDecimal}"
+      - name: transaction_view
+        type: "{id,type,amount,description,createdAt}"
+      - name: schedule_view
+        type: "{id,amount,destination,scheduledAt,status}"
+      - name: bill_view
+        type: "{id,description,amount,dueDate,status}"
+      - name: operation_idempotency
+        type: "(userId, requestId) unique + conflict behavior"
+    god_class: false
+    split_candidate: true
+    migration_strategy: split
+    notes: "Dashboard and backend share a provider-safe simulated ledger. Future account/schedule/bill seams should remain cohesive but independently deployable."
+  - name: split-domain-contract
+    kind: dto
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitGroup.java:11"
+    used_by_units:
+      - next-dashboard-experience
+      - backend-split-api
+      - backend-split-event-consumer
+    fields:
+      - name: group_response
+        type: "{id,name,ownerUserId,members[]}"
+      - name: transaction_response
+        type: "{transactionId,description,totalAmount,shares[]}"
+      - name: percentage_rules
+        type: "members sum exactly 100.00; HALF_EVEN allocation"
+    god_class: false
+    split_candidate: false
+    migration_strategy: wrap
+    notes: "UI and event consumer may evolve independently but preserve exact response DTO names and allocation semantics."
+  - name: provider-account-contract
+    kind: dto
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/BaaSAccountResponse.java:5"
+    used_by_units:
+      - backend-account-provider-api
+      - backend-split-event-consumer
+      - backend-mock-baas-api
+    fields:
+      - name: provider_request
+        type: "{customerId,accountType}"
+      - name: provider_response
+        type: "{baasAccountId,accountNumber,branch,routingNumber,initialBalance,status}"
+    god_class: false
+    split_candidate: false
+    migration_strategy: wrap
+    notes: "Provider adapter is the mandatory test-double boundary; real transport is not enabled by default."

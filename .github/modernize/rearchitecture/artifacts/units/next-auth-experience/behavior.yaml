@@ -1,0 +1,31 @@
+unit: next-auth-experience
+side_effects:
+  - source_loc: "giro-app/app/page.tsx:20"
+    effect: "POSTs normalized CPF and password/name to the same-origin auth route; server sets the access cookie."
+    must_preserve: true
+branches:
+  - source_loc: "giro-app/app/page.tsx:8"
+    condition: "isRegistering is true"
+    behavior: "Show name field, 12-character minimum, call register, and render registration copy."
+    must_preserve: true
+  - source_loc: "giro-app/app/page.tsx:27"
+    condition: "Auth response is non-2xx"
+    behavior: "Render returned/safe message in role=alert and remain on page."
+    must_preserve: true
+  - source_loc: "giro-app/app/page.tsx:30"
+    condition: "Auth response succeeds"
+    behavior: "Replace navigation history with /dashboard."
+    must_preserve: true
+error_paths:
+  - source_loc: "giro-app/app/page.tsx:33"
+    trigger: "Network or JSON/application error"
+    outcome: "Loading ends and role=alert error is rendered."
+    contract: "Existing localized user-visible message."
+    must_preserve: true
+concurrency:
+  model: event-loop
+  tx_boundary:
+    source_loc: "giro-app/app/page.tsx:13"
+    scope: "No client transaction; single in-flight form state gates duplicate submission by loading."
+    isolation: "browser component state"
+    must_preserve: false

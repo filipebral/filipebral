@@ -1,0 +1,7 @@
+unit: backend-mock-baas-api
+commit: false
+candidate_splits:
+  - id: giro-app/backend/src/main/java/com/giro_app/backend/BaasMockController.java:13-26
+    drivers: [reuse_split, concern_split]
+    rationale: "Reusable provider fixtures should be separated from the REST test double if scenario coverage expands."
+    source_slice: {file: giro-app/backend/src/main/java/com/giro_app/backend/BaasMockController.java, lines: [13, 26]}

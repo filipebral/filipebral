@@ -1,0 +1,316 @@
+units:
+  - name: next-auth-experience
+    trigger: page
+    trigger_detail: "GET / with POST actions to /api/auth/login and /api/auth/register"
+    source_anchors:
+      - path: giro-app/app/page.tsx
+        line: 6
+    exported_signature:
+      - method: "Home() -> React page; submits {cpf,password} or {cpf,name,password}"
+        source_loc: "giro-app/app/page.tsx:6"
+        stability: frozen
+    dynamic_entrypoints:
+      - target: "Next.js App Router page"
+        mechanism: convention
+        source_loc: "giro-app/app/page.tsx:1"
+    depends_on:
+      - unit: next-auth-bff
+        via: "same-origin POST /api/auth/login|register"
+    shared_refs:
+      - module: security-cookie-contract
+        used_fields: [access_cookie_name]
+
+  - name: next-dashboard-experience
+    trigger: page
+    trigger_detail: "GET /dashboard plus modal and simulation actions"
+    source_anchors:
+      - path: giro-app/app/dashboard/page.tsx
+        line: 10
+      - path: giro-app/components/SimulationPanel.tsx
+        line: 24
+      - path: giro-app/components/FinancialSimulators.tsx
+        line: 13
+      - path: giro-app/components/CreateSplitGroupModal.tsx
+        line: 16
+      - path: giro-app/components/ProcessSplitModal.tsx
+        line: 23
+      - path: giro-app/lib/financial-simulations.ts
+        line: 19
+    exported_signature:
+      - method: "Dashboard() -> React page"
+        source_loc: "giro-app/app/dashboard/page.tsx:10"
+        stability: frozen
+      - method: "simulateLoan(Input) -> {total,interest,installment}; simulateInvestment(Input) -> {total,interest}"
+        source_loc: "giro-app/lib/financial-simulations.ts:19"
+        stability: must_preserve
+    dynamic_entrypoints:
+      - target: "Next.js App Router dashboard page"
+        mechanism: convention
+        source_loc: "giro-app/app/dashboard/page.tsx:1"
+    depends_on:
+      - unit: next-api-boundary
+        via: "same-origin /api/proxy/* calls"
+      - unit: next-auth-bff
+        via: "POST /api/auth/logout"
+    shared_refs:
+      - module: simulation-domain-contract
+        used_fields: [account_balance, transaction_view, schedule_view, bill_view]
+      - module: split-domain-contract
+        used_fields: [group_response, transaction_response]
+
+  - name: next-auth-bff
+    trigger: api
+    trigger_detail: "POST /api/auth/login, POST /api/auth/register, POST /api/auth/logout"
+    source_anchors:
+      - path: giro-app/app/api/auth/login/route.ts
+        line: 4
+      - path: giro-app/app/api/auth/register/route.ts
+        line: 4
+      - path: giro-app/app/api/auth/logout/route.ts
+        line: 4
+      - path: giro-app/lib/auth-server.ts
+        line: 6
+    exported_signature:
+      - method: "POST /api/auth/login|register -> {user:{id,name}}; sets giro_access_token cookie"
+        source_loc: "giro-app/lib/auth-server.ts:6"
+        stability: frozen
+      - method: "POST /api/auth/logout -> {success:true}; expires giro_access_token cookie"
+        source_loc: "giro-app/app/api/auth/logout/route.ts:4"
+        stability: frozen
+    dynamic_entrypoints:
+      - target: "Next.js route handlers"
+        mechanism: convention
+        source_loc: "giro-app/app/api/auth/login/route.ts:1"
+    depends_on:
+      - unit: backend-auth-api
+        via: "server-side POST /api/auth/login|register"
+    shared_refs:
+      - module: security-cookie-contract
+        used_fields: [access_cookie_name, token_lifetime, cookie_policy]
+
+  - name: next-api-boundary
+    trigger: api
+    trigger_detail: "GET|HEAD|POST|PUT|PATCH|DELETE /api/proxy/[...path]"
+    source_anchors:
+      - path: giro-app/app/api/proxy/[...path]/route.ts
+        line: 5
+      - path: giro-app/proxy.ts
+        line: 46
+    exported_signature:
+      - method: "forward(request,path) -> backend status/body with cookie removed and Authorization: Bearer <JWT>"
+        source_loc: "giro-app/app/api/proxy/[...path]/route.ts:5"
+        stability: frozen
+      - method: "proxy(request) -> next or redirect / for /dashboard/*"
+        source_loc: "giro-app/proxy.ts:46"
+        stability: must_preserve
+    dynamic_entrypoints:
+      - target: "Next.js catch-all route handlers and middleware proxy"
+        mechanism: convention
+        source_loc: "giro-app/app/api/proxy/[...path]/route.ts:1"
+    depends_on:
+      - unit: backend-auth-api
+        via: "JWT issuer/audience/expiry validation contract"
+      - unit: backend-account-provider-api
+        via: "POST /accounts"
+      - unit: backend-simulation-api
+        via: "/simulation/*"
+      - unit: backend-split-api
+        via: "/api/split-*"
+    shared_refs:
+      - module: security-cookie-contract
+        used_fields: [access_cookie_name, jwt_claims, cookie_policy]
+
+  - name: backend-auth-api
+    trigger: api
+    trigger_detail: "POST /api/auth/register and POST /api/auth/login"
+    source_anchors:
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/AuthController.java
+        line: 11
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/AuthService.java
+        line: 18
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/RegisterRequestDTO.java
+        line: 6
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/LoginRequestDTO.java
+        line: 6
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/AuthResponseDTO.java
+        line: 5
+    exported_signature:
+      - method: "register(RegisterRequestDTO) -> 201 AuthResponseDTO"
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthController.java:21"
+        stability: frozen
+      - method: "login(LoginRequestDTO) -> AuthResponseDTO"
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthController.java:26"
+        stability: frozen
+    dynamic_entrypoints:
+      - target: "AuthController/AuthService beans and validation/JWT encoders"
+        mechanism: di
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SecurityConfig.java:31"
+    depends_on: []
+    shared_refs:
+      - module: security-cookie-contract
+        used_fields: [jwt_claims, token_lifetime]
+      - module: user-persistence-contract
+        used_fields: [user_id, cpf_encrypted, cpf_lookup_hash, password_hash]
+
+  - name: backend-account-provider-api
+    trigger: api
+    trigger_detail: "POST /accounts"
+    source_anchors:
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/AccountController.java
+        line: 12
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/CreateAccountUseCase.java
+        line: 6
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/Account.java
+        line: 8
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/AccountRequestDTO.java
+        line: 4
+    exported_signature:
+      - method: "createAccount(AccountRequestDTO, Jwt) -> 201 Account"
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AccountController.java:27"
+        stability: frozen
+    dynamic_entrypoints:
+      - target: "AccountController/CreateAccountUseCase beans"
+        mechanism: di
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AccountController.java:14"
+    depends_on:
+      - unit: backend-mock-baas-api
+        via: "POST /mock-baas/accounts when baas.api.url points to local mock"
+    shared_refs:
+      - module: provider-account-contract
+        used_fields: [provider_request, provider_response]
+      - module: security-cookie-contract
+        used_fields: [jwt_claims]
+
+  - name: backend-simulation-api
+    trigger: api
+    trigger_detail: "GET|POST /simulation/* account, statement, credit, pix, transfer, schedules, bills"
+    source_anchors:
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/SimulationController.java
+        line: 18
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/SimulationService.java
+        line: 14
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduleService.java
+        line: 14
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/SimulationBillService.java
+        line: 13
+    exported_signature:
+      - method: "/simulation contract -> AccountView|TransactionView[]|ScheduleView|BillView"
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationController.java:32"
+        stability: frozen
+    dynamic_entrypoints:
+      - target: "Simulation beans"
+        mechanism: annotation-scan
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationController.java:20"
+    depends_on:
+      - unit: backend-auth-api
+        via: "JWT subject supplies user UUID"
+    shared_refs:
+      - module: simulation-domain-contract
+        used_fields: [account_balance, transaction_view, schedule_view, bill_view, operation_idempotency]
+      - module: security-cookie-contract
+        used_fields: [jwt_claims]
+
+  - name: backend-split-api
+    trigger: api
+    trigger_detail: "POST /api/split-groups and POST /api/split-transactions"
+    source_anchors:
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/SplitGroupController.java
+        line: 9
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/CreateSplitGroupUseCase.java
+        line: 8
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/SplitTransactionController.java
+        line: 9
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/ProcessSplitTransactionUseCase.java
+        line: 13
+    exported_signature:
+      - method: "createGroup(CreateSplitGroupRequestDTO, Jwt) -> SplitGroupResponseDTO"
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitGroupController.java:19"
+        stability: frozen
+      - method: "processSplit(SplitTransactionRequestDTO, Jwt) -> SplitTransactionResponseDTO"
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitTransactionController.java:19"
+        stability: frozen
+    dynamic_entrypoints:
+      - target: "Split controllers/use cases/repositories"
+        mechanism: di
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitGroupController.java:11"
+    depends_on:
+      - unit: backend-auth-api
+        via: "JWT subject owner check"
+    shared_refs:
+      - module: split-domain-contract
+        used_fields: [group_response, transaction_response, percentage_rules]
+      - module: security-cookie-contract
+        used_fields: [jwt_claims]
+
+  - name: backend-simulation-worker
+    trigger: job
+    trigger_detail: "fixed-delay scheduled execution of PENDING simulation_schedules"
+    source_anchors:
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduler.java
+        line: 11
+    exported_signature:
+      - method: "executeDue() scheduled void"
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduler.java:24"
+        stability: must_preserve
+    dynamic_entrypoints:
+      - target: "SimulationScheduler.executeDue"
+        mechanism: annotation-scan
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduler.java:24"
+    depends_on:
+      - unit: backend-simulation-api
+        via: "SimulationScheduleService.execute"
+    shared_refs:
+      - module: simulation-domain-contract
+        used_fields: [schedule_view, operation_idempotency]
+
+  - name: backend-split-event-consumer
+    trigger: handler
+    trigger_detail: "RabbitMQ queue giro.split-bills.queue receives transaction.created"
+    source_anchors:
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/SplitBillListener.java
+        line: 6
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/RabbitMQConfig.java
+        line: 8
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/TransactionEventPublisher.java
+        line: 5
+    exported_signature:
+      - method: "processTransactionSplit(TransactionCreatedEvent) -> void"
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitBillListener.java:11"
+        stability: may_change
+    dynamic_entrypoints:
+      - target: "SplitBillListener.processTransactionSplit"
+        mechanism: annotation-scan
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitBillListener.java:11"
+    depends_on:
+      - unit: backend-account-provider-api
+        via: "future provider-safe debit/credit bridge (currently comments only)"
+    shared_refs:
+      - module: provider-account-contract
+        used_fields: [provider_request, provider_response]
+      - module: split-domain-contract
+        used_fields: [percentage_rules]
+
+  - name: backend-mock-baas-api
+    trigger: api
+    trigger_detail: "POST /mock-baas/accounts (all non-prod profiles)"
+    source_anchors:
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/BaasMockController.java
+        line: 8
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/BaaSFeignClient.java
+        line: 7
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/BaaSGatewayImpl.java
+        line: 4
+      - path: giro-app/backend/src/main/java/com/giro_app/backend/BaaSAccountResponse.java
+        line: 5
+    exported_signature:
+      - method: "POST /mock-baas/accounts -> 200 BaaSAccountResponse"
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/BaasMockController.java:13"
+        stability: must_preserve
+    dynamic_entrypoints:
+      - target: "BaaS Feign client"
+        mechanism: annotation-scan
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/BaaSFeignClient.java:7"
+    depends_on: []
+    shared_refs:
+      - module: provider-account-contract
+        used_fields: [provider_request, provider_response]

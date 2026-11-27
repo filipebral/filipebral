@@ -1,0 +1,15 @@
+unit: backend-split-api
+bindings:
+  - type: annotation
+    name: "@RequestMapping /api/split-groups"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitGroupController.java:10"
+    target: "group create"
+    must_appear_in_target: true
+    notes: "Authenticated, currently no @Valid."
+  - type: annotation
+    name: "@RequestMapping /api/split-transactions"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitTransactionController.java:10"
+    target: "split process"
+    must_appear_in_target: true
+    notes: "Authenticated, owner-only."
+runtime_config: []

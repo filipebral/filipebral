@@ -1,0 +1,40 @@
+unit: next-dashboard-experience
+side_effects:
+  - source_loc: "giro-app/app/dashboard/page.tsx:18"
+    effect: "Logout expires cookie then redirects to /."
+    must_preserve: true
+  - source_loc: "giro-app/app/dashboard/page.tsx:23"
+    effect: "Submits provider account creation only through /api/proxy/accounts."
+    must_preserve: true
+  - source_loc: "giro-app/components/SimulationPanel.tsx:98"
+    effect: "Creates idempotent simulated balance, Pix, transfer, schedule, bill, pay, and cancel actions; no real money."
+    must_preserve: true
+  - source_loc: "giro-app/components/CreateSplitGroupModal.tsx:46"
+    effect: "Persists a split group whose percentages sum to 100%."
+    must_preserve: true
+branches:
+  - source_loc: "giro-app/components/SimulationPanel.tsx:57"
+    condition: "Simulation/account endpoints return 404"
+    behavior: "Hide unavailable simulation or show create-simulation-account action."
+    must_preserve: true
+  - source_loc: "giro-app/components/FinancialSimulators.tsx:28"
+    condition: "kind is loan or investment"
+    behavior: "Run fixed-price or compound-growth calculation and show estimate disclaimer."
+    must_preserve: true
+  - source_loc: "giro-app/components/ProcessSplitModal.tsx:48"
+    condition: "split succeeds"
+    behavior: "Replace form with calculated participant shares."
+    must_preserve: true
+error_paths:
+  - source_loc: "giro-app/components/SimulationPanel.tsx:78"
+    trigger: "Any simulated API error"
+    outcome: "role=alert localized error; busy state clears; pending id remains retryable."
+    contract: "No real-money claim is emitted."
+    must_preserve: true
+concurrency:
+  model: event-loop
+  tx_boundary:
+    source_loc: "giro-app/components/SimulationPanel.tsx:104"
+    scope: "One pending browser operation signature/requestId; backend owns ledger atomicity."
+    isolation: "component pending ref"
+    must_preserve: true

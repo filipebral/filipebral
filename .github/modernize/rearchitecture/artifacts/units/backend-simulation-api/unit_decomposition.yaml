@@ -1,0 +1,7 @@
+unit: backend-simulation-api
+commit: false
+candidate_splits:
+  - id: giro-app/backend/src/main/java/com/giro_app/backend/SimulationController.java:32-93
+    drivers: [concern_split, data_ownership_split]
+    rationale: "Account ledger, scheduled execution, and bill lifecycle own separate data sets and status machines."
+    source_slice: {file: giro-app/backend/src/main/java/com/giro_app/backend/SimulationController.java, lines: [32, 93]}

@@ -1,0 +1,638 @@
+{
+  "schema": "clarification-questions/v1",
+  "generated_at": "2026-11-23T02:39:12.115Z",
+  "user_input": "Seguir com todas as pendencias deixar a parte da licença por ultimo. Implement all missing product, platform, security, observability, and UI capabilities in sequenced batches for the existing Next.js + Spring Boot digital banking MVP. Defer licensing/regulatory work until the final wave, but include technical/regulatory readiness artifacts last. Do not invent a real provider: identify and resolve required provider/API decisions through the normal clarification/architecture/planning gates. Preserve truthful simulation-only behavior until a real, configured BaaS/financial provider integration is available; add contract-level abstractions and test doubles rather than claiming money movement. Prioritize: 1) security/session/recovery/KYC-ready onboarding, 2) real-provider-ready account+ledger+reconciliation+notifications, 3) Pix/transfer/boleto APIs and UI, 4) cards/credit/investments/insurance/support interfaces behind provider abstractions, 5) observability, antifraud/limits/audit/accessibility and 6) licensing/legal readiness last. Use existing code, avoid unrelated rewrites, do not commit. Classification: brownfield upgrade. Change type: upgrade. Project facts: 3,112 nonblank LOC; Java 1,967; JavaScript/TypeScript 1,145; 8 visible top-level directories; 6 git commits; Next.js frontend plus Spring Boot backend; a nested giro-app tree appears duplicated and must be scoped/verified during planning; only CPF/password auth, cookie/JWT flow, disabled mock BaaS account creation, simulated balance/Pix/transfer/bills/scheduling, split calculation without money movement, and local loan/investment calculators currently exist. Feasibility verdict: RISKY due to broad scope and unresolved external financial provider, KYC, notification, Pix/boleto, cards/credit/insurance dependencies; proceed because the user explicitly requested provider decisions through clarification and architecture gates. Record this as proceeding with a known-risk warning.",
+  "title": "Giro digital banking MVP capability completion",
+  "assessment_snapshot": {
+    "intro": "The assessment identifies an existing Next.js and Spring Boot banking MVP that should be completed in-place through provider-safe, sequenced product and platform waves, with a known-risk warning:",
+    "bullets": [
+      "3,112 nonblank LOC across 1,967 Java and 1,145 JavaScript/TypeScript lines; 8 visible top-level directories; 6 git commits.",
+      "Current functionality is limited to CPF/password cookie/JWT auth, disabled mock BaaS account creation, simulated balance/PIX/transfer/bills/scheduling, split calculation, and local loan/investment calculators.",
+      "Financial, KYC, notification, Pix/boleto, cards, credit, and insurance provider/API choices remain unresolved and determine major contracts.",
+      "A nested giro-app tree appears duplicated and must be verified during planning before implementation scope is fixed.",
+      "Licensing/regulatory work is explicitly sequenced last, while technical and regulatory-readiness artifacts must preserve truthful simulation-only claims until configured real providers exist."
+    ]
+  },
+  "proposed_outcome": "Complete the existing banking MVP in-place in six ordered waves: security/session/recovery/KYC-ready onboarding; real-provider-ready accounts, ledger, reconciliation, and notifications; Pix/transfer/boleto; provider-abstracted cards, credit, investments, insurance, and support; observability, antifraud, limits, audit, and accessibility; then licensing/legal readiness. Existing behavior and client contracts are preserved unless explicitly changed, all money-movement claims remain simulation-only until a configured provider is available, external dependencies are represented through contracts and test doubles, and unrelated rewrites and commits are avoided.",
+  "scope": [
+    "frontend",
+    "backend",
+    "generic"
+  ],
+  "status": "answered",
+  "questions": [
+    {
+      "id": "F1",
+      "kit": "frontend",
+      "field": "target.framework",
+      "title": "Target frontend framework",
+      "question": "Which exact Next.js major version must the upgraded frontend target?",
+      "importance": "required",
+      "impact": 5,
+      "recommended": null,
+      "default": null,
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "Preserve current detected Next.js major",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "Preserve current detected Next.js major",
+          "label": "Preserve the current detected Next.js major version"
+        },
+        {
+          "value": "Next.js 15",
+          "label": "Next.js 15"
+        },
+        {
+          "value": "Next.js 16",
+          "label": "Next.js 16"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "F2",
+      "kit": "frontend",
+      "field": "target.component_library",
+      "title": "Component library",
+      "question": "Which component/UI library and major version should govern the expanded banking interfaces?",
+      "importance": "required",
+      "impact": 5,
+      "recommended": "Preserve existing detected library",
+      "default": null,
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "Preserve existing detected library",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "Preserve existing detected library",
+          "label": "Preserve the existing detected component library"
+        },
+        {
+          "value": "shadcn/ui",
+          "label": "shadcn/ui"
+        },
+        {
+          "value": "Radix UI primitives",
+          "label": "Radix UI primitives"
+        },
+        {
+          "value": "MUI v7",
+          "label": "Material UI v7"
+        },
+        {
+          "value": "Tailwind CSS + existing primitives",
+          "label": "Tailwind CSS plus existing primitives"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "F3",
+      "kit": "frontend",
+      "field": "visual.screenshots",
+      "title": "Current UI references",
+      "question": "Provide screenshots, screen recordings, staging URLs, or Figma links for the current banking UI and key states.",
+      "importance": "required",
+      "impact": 5,
+      "recommended": null,
+      "default": null,
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "Referências locais atuais: tela de login em giro-app/app/page.tsx e dashboard bancário em giro-app/app/dashboard/page.tsx. Componentes de UI em giro-app/components/SimulationPanel.tsx, FinancialSimulators.tsx, CreateSplitGroupModal.tsx e ProcessSplitModal.tsx. Ainda não há URL de homologação, gravação ou link do Figma publicado.",
+        "source": "user"
+      },
+      "depends_on": null,
+      "type": "text"
+    },
+    {
+      "id": "F4",
+      "kit": "frontend",
+      "field": "visual.design_system",
+      "title": "Design system source",
+      "question": "What is the authoritative design-system or token source for the new banking UI states?",
+      "importance": "required",
+      "impact": 4,
+      "recommended": null,
+      "default": "match existing pixel-by-pixel using extracted CSS custom properties",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "Use existing code as the source; match current styling pixel-for-pixel using extracted CSS custom properties.",
+        "source": "user"
+      },
+      "depends_on": null,
+      "type": "text"
+    },
+    {
+      "id": "F5",
+      "kit": "frontend",
+      "field": "compliance.accessibility",
+      "title": "Accessibility target",
+      "question": "Which accessibility standard must the expanded UI satisfy?",
+      "importance": "recommended",
+      "impact": 4,
+      "recommended": "WCAG 2.2 AA",
+      "default": "WCAG 2.1 AA",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "WCAG 2.1 AA",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "WCAG 2.2 AA",
+          "label": "WCAG 2.2 AA"
+        },
+        {
+          "value": "WCAG 2.1 AA",
+          "label": "WCAG 2.1 AA"
+        },
+        {
+          "value": "Section 508",
+          "label": "Section 508"
+        },
+        {
+          "value": "No formal target beyond usable accessible defaults",
+          "label": "No formal target beyond usable accessible defaults"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "F6",
+      "kit": "frontend",
+      "field": "compatibility.browsers",
+      "title": "Browser targets",
+      "question": "Which browser and runtime compatibility matrix must be verified?",
+      "importance": "recommended",
+      "impact": 3,
+      "recommended": "modern evergreen",
+      "default": "modern evergreen (Chrome, Firefox, Safari, Edge — latest 2 major versions)",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "modern evergreen (Chrome, Firefox, Safari, Edge — latest 2 major versions)",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "modern evergreen",
+          "label": "Modern evergreen: latest 2 Chrome, Firefox, Safari, and Edge"
+        },
+        {
+          "value": "Chrome and Safari current only",
+          "label": "Current Chrome and Safari only"
+        },
+        {
+          "value": "match current production matrix",
+          "label": "Match the current production compatibility matrix"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "F7",
+      "kit": "frontend",
+      "field": "responsive.breakpoints",
+      "title": "Responsive strategy",
+      "question": "Which responsive and breakpoint strategy should all new product interfaces follow?",
+      "importance": "recommended",
+      "impact": 4,
+      "recommended": "mobile-first using existing breakpoints",
+      "default": "mobile-first using existing breakpoints detected from codebase",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "mobile-first using existing breakpoints detected from codebase",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "mobile-first using existing breakpoints",
+          "label": "Mobile-first using existing detected breakpoints"
+        },
+        {
+          "value": "match current layout exactly",
+          "label": "Match the current layout and breakpoints exactly"
+        },
+        {
+          "value": "mobile and desktop adaptive",
+          "label": "Separate optimized mobile and desktop adaptive layouts"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "F8",
+      "kit": "frontend",
+      "field": "i18n.locales",
+      "title": "Locales in scope",
+      "question": "Which locales must be supported across the expanded frontend?",
+      "importance": "optional",
+      "impact": 2,
+      "recommended": null,
+      "default": "preserve current locales; keep existing i18n library if present",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": [
+          "preserve current locales; keep existing i18n library if present"
+        ],
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "pt-BR",
+          "label": "Portuguese (Brazil)"
+        },
+        {
+          "value": "en-US",
+          "label": "English (United States)"
+        },
+        {
+          "value": "es",
+          "label": "Spanish"
+        },
+        {
+          "value": "preserve current locales",
+          "label": "Preserve the locales currently detected in the application"
+        }
+      ],
+      "allow_other": true,
+      "type": "multi_select"
+    },
+    {
+      "id": "F9",
+      "kit": "frontend",
+      "field": "state_mgmt.preference",
+      "title": "State management",
+      "question": "Which client-side state-management approach should the new capability batches use?",
+      "importance": "optional",
+      "impact": 3,
+      "recommended": "preserve existing pattern",
+      "default": "preserve existing pattern if identifiable; otherwise recommend minimal (component state + server-state library)",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "preserve existing pattern if identifiable; otherwise recommend minimal (component state + server-state library)",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "preserve existing pattern",
+          "label": "Preserve the existing pattern detected in the frontend"
+        },
+        {
+          "value": "component state plus server-state library",
+          "label": "Component state plus a server-state library"
+        },
+        {
+          "value": "Zustand",
+          "label": "Zustand"
+        },
+        {
+          "value": "Redux Toolkit",
+          "label": "Redux Toolkit"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "F10",
+      "kit": "frontend",
+      "field": "routing.preference",
+      "title": "Routing strategy",
+      "question": "Which Next.js routing strategy must the completed product use?",
+      "importance": "optional",
+      "impact": 3,
+      "recommended": "preserve current router",
+      "default": "use the de-facto router for the chosen target framework",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "use the de-facto router for the chosen target framework",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "preserve current router",
+          "label": "Preserve the router currently detected in the application"
+        },
+        {
+          "value": "Next.js App Router",
+          "label": "Next.js App Router"
+        },
+        {
+          "value": "Next.js Pages Router",
+          "label": "Next.js Pages Router"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "B1",
+      "kit": "backend",
+      "field": "target.framework",
+      "title": "Target backend framework",
+      "question": "Which exact Spring Boot major version must the upgraded backend target?",
+      "importance": "required",
+      "impact": 5,
+      "recommended": null,
+      "default": null,
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "Preserve current detected Spring Boot major",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "Preserve current detected Spring Boot major",
+          "label": "Preserve the current detected Spring Boot major version"
+        },
+        {
+          "value": "Spring Boot 3",
+          "label": "Spring Boot 3"
+        },
+        {
+          "value": "Spring Boot 4",
+          "label": "Spring Boot 4"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "B2",
+      "kit": "backend",
+      "field": "api.contract_preservation",
+      "title": "API contract policy",
+      "question": "What external API contract-preservation policy should govern the banking capability expansion?",
+      "importance": "required",
+      "impact": 5,
+      "recommended": "must preserve",
+      "default": "must preserve",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "must preserve",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "must preserve",
+          "label": "Preserve all existing endpoints, payloads, and status codes"
+        },
+        {
+          "value": "can break with versioning",
+          "label": "Allow breaking changes only through a versioned API"
+        },
+        {
+          "value": "can break",
+          "label": "No existing clients must be protected; redesign is allowed"
+        },
+        {
+          "value": "partial: existing auth and transaction contracts only",
+          "label": "Preserve existing auth and transaction contracts; other APIs may evolve"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "B3",
+      "kit": "backend",
+      "field": "data.migration_strategy",
+      "title": "Data migration strategy",
+      "question": "Which database and ledger data-migration approach is authorized for the capability completion?",
+      "importance": "required",
+      "impact": 5,
+      "recommended": "TBD / assess in research phase",
+      "default": "TBD / assess in research phase",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "TBD / assess in research phase",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "TBD / assess in research phase",
+          "label": "Assess and decide during architecture research"
+        },
+        {
+          "value": "in-place",
+          "label": "Evolve the current schema in place"
+        },
+        {
+          "value": "dual-write",
+          "label": "Dual-write during a controlled transition"
+        },
+        {
+          "value": "new schema",
+          "label": "Create a new schema with an ETL migration"
+        },
+        {
+          "value": "no migration",
+          "label": "Keep the database unchanged; limit work to application APIs"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "B4",
+      "kit": "backend",
+      "field": "auth.framework",
+      "title": "Authentication framework",
+      "question": "Which authentication and authorization framework policy should the security/session/recovery wave follow?",
+      "importance": "recommended",
+      "impact": 5,
+      "recommended": "Preserve cookie/JWT flow and harden it with Spring Security",
+      "default": "preserve existing auth mechanism; detect from codebase",
+      "prefilled": true,
+      "prefilled_value": "Preserve cookie/JWT flow and harden it with Spring Security",
+      "answer": {
+        "value": "Preserve cookie/JWT flow and harden it with Spring Security",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "Preserve cookie/JWT flow and harden it with Spring Security",
+          "label": "Preserve the detected cookie/JWT flow and harden it with Spring Security"
+        },
+        {
+          "value": "Spring Security with server-side sessions",
+          "label": "Move to Spring Security-managed server-side sessions"
+        },
+        {
+          "value": "External identity provider",
+          "label": "Federate through an external identity provider"
+        },
+        {
+          "value": "Preserve existing auth mechanism; detect from codebase",
+          "label": "Preserve the existing mechanism after codebase detection"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "B5",
+      "kit": "backend",
+      "field": "nfr.sla",
+      "title": "SLA targets",
+      "question": "Which non-functional SLA and performance targets should gate the new backend capabilities?",
+      "importance": "recommended",
+      "impact": 4,
+      "recommended": null,
+      "default": "match current production baseline; no regression",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "match current production baseline; no regression",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "match current production baseline",
+          "label": "Match the current production baseline with no regression"
+        },
+        {
+          "value": "99.9% availability and p95 < 500ms",
+          "label": "99.9% availability and p95 latency below 500 ms"
+        },
+        {
+          "value": "99.95% availability and p95 < 250ms",
+          "label": "99.95% availability and p95 latency below 250 ms"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "G1",
+      "kit": "generic",
+      "field": "success.definition",
+      "title": "Definition of done",
+      "question": "What observable outcome constitutes successful completion of the banking MVP capability expansion?",
+      "importance": "required",
+      "impact": 5,
+      "recommended": null,
+      "default": "feature parity with the current system; all existing user-facing behaviors preserved",
+      "prefilled": true,
+      "prefilled_value": "Complete all six prioritized waves in the existing codebase, preserve current behavior, provide provider-ready contracts and test doubles, keep money-movement behavior explicitly simulated until a configured real provider exists, and defer licensing/legal readiness to the final wave.",
+      "answer": {
+        "value": "Complete all six prioritized waves in the existing codebase, preserve current behavior, provide provider-ready contracts and test doubles, keep money-movement behavior explicitly simulated until a configured real provider exists, and defer licensing/legal readiness to the final wave.",
+        "source": "user"
+      },
+      "depends_on": null,
+      "type": "text"
+    },
+    {
+      "id": "G2",
+      "kit": "generic",
+      "field": "out_of_scope",
+      "title": "Out-of-scope boundaries",
+      "question": "What remains explicitly out of scope or must be excluded from implementation?",
+      "importance": "recommended",
+      "impact": 4,
+      "recommended": null,
+      "default": "no explicit exclusions; agent will infer from project structure",
+      "prefilled": true,
+      "prefilled_value": "Real money movement before a configured provider; unrelated rewrites; claiming an invented or unconfigured financial provider; committing changes; licensing/regulatory implementation before the final wave.",
+      "answer": {
+        "value": "Real money movement before a configured provider; unrelated rewrites; claiming an invented or unconfigured financial provider; committing changes; licensing/regulatory implementation before the final wave.",
+        "source": "user"
+      },
+      "depends_on": null,
+      "type": "text"
+    },
+    {
+      "id": "G3",
+      "kit": "generic",
+      "field": "existing_tests.posture",
+      "title": "Test suite policy",
+      "question": "What policy should apply to existing tests and baseline behavior during implementation?",
+      "importance": "recommended",
+      "impact": 4,
+      "recommended": "must pass",
+      "default": "must pass",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "must pass",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "must pass",
+          "label": "All existing tests must pass with zero regressions"
+        },
+        {
+          "value": "can rewrite",
+          "label": "Equivalent tests may replace existing tests"
+        },
+        {
+          "value": "ignore",
+          "label": "Ignore broken legacy tests and establish a new baseline"
+        },
+        {
+          "value": "partial: core banking and security flows must pass",
+          "label": "Core banking and security flows must pass; other tests may be replaced"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "G5",
+      "kit": "generic",
+      "field": "constraints.additional",
+      "title": "Additional Constraints",
+      "question": "Record any additional constraints and, if known, identify the intended BaaS/financial, KYC, notification, Pix/boleto, cards, credit, insurance, and support providers; required API/documentation locations; account/ledger ownership; settlement/reconciliation responsibilities; and provider sandbox availability.",
+      "importance": "optional",
+      "impact": 5,
+      "recommended": null,
+      "default": "None beyond the decisions listed in this specification.",
+      "prefilled": true,
+      "prefilled_value": "None beyond the decisions listed in this specification.",
+      "answer": {
+        "value": "None beyond the decisions listed in this specification.",
+        "source": "user"
+      },
+      "depends_on": null,
+      "type": "text"
+    }
+  ]
+}

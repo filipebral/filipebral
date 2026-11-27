@@ -1,0 +1,21 @@
+unit: backend-split-event-consumer
+bindings:
+  - type: listener
+    name: "@RabbitListener queues=giro.split-bills.queue"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitBillListener.java:11"
+    target: "processTransactionSplit"
+    must_appear_in_target: false
+    notes: "Keep disabled until provider idempotency and event ID are ready."
+  - type: di-registration
+    name: "Queue, TopicExchange, Binding, JSON MessageConverter"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/RabbitMQConfig.java:16"
+    target: "Rabbit infrastructure"
+    must_appear_in_target: true
+    notes: "Contract wiring remains provider-safe."
+runtime_config:
+  - key: spring.rabbitmq.listener.simple.auto-startup
+    source_loc: "giro-app/backend/src/main/resources/application.yaml:25"
+    source: properties-file
+    default_value: "false"
+    must_appear_in_target: true
+    notes: "Safety gate."

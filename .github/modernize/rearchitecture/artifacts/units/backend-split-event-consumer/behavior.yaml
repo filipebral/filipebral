@@ -1,0 +1,26 @@
+unit: backend-split-event-consumer
+side_effects:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/TransactionEventPublisher.java:14"
+    effect: "Publishes JSON TransactionCreatedEvent to topic exchange with transaction.created key."
+    must_preserve: false
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitBillListener.java:11"
+    effect: "Logs simulated split receipt; provider/group work is currently placeholder comments only."
+    must_preserve: true
+branches:
+  - source_loc: "giro-app/backend/src/main/resources/application.yaml:25"
+    condition: "Rabbit listener simple.auto-startup false"
+    behavior: "Consumer remains disabled by default."
+    must_preserve: true
+error_paths:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitBillListener.java:20"
+    trigger: "Listener processing throws"
+    outcome: "RuntimeException requests broker retry/redelivery."
+    contract: "No provider call or money movement currently occurs."
+    must_preserve: true
+concurrency:
+  model: async
+  tx_boundary:
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitBillListener.java:12"
+    scope: "Spring listener method transaction only; no DB/provider operation is implemented."
+    isolation: "broker acknowledgement/redelivery is external"
+    must_preserve: true

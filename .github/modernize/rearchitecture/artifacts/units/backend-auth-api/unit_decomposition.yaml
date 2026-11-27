@@ -1,0 +1,7 @@
+unit: backend-auth-api
+commit: false
+candidate_splits:
+  - id: giro-app/backend/src/main/java/com/giro_app/backend/AuthService.java:39-84
+    drivers: [concern_split, lifecycle_split]
+    rationale: "Credential onboarding, authentication, and token issuance are separate security lifecycles for future recovery/session/KYC work."
+    source_slice: {file: giro-app/backend/src/main/java/com/giro_app/backend/AuthService.java, lines: [39, 84]}

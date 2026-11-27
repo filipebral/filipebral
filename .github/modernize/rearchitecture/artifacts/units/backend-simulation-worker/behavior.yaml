@@ -1,0 +1,30 @@
+unit: backend-simulation-worker
+side_effects:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduler.java:25"
+    effect: "Selects up to 100 due PENDING schedules and attempts execution."
+    must_preserve: true
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduleService.java:66"
+    effect: "Moves a due schedule to COMPLETED after simulated debit or FAILED on insufficient balance."
+    must_preserve: true
+branches:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduleService.java:69"
+    condition: "Schedule is not pending or not yet due"
+    behavior: "Return without side effect."
+    must_preserve: true
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduleService.java:71"
+    condition: "Insufficient simulated balance"
+    behavior: "Mark FAILED and do not create transaction."
+    must_preserve: true
+error_paths:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduler.java:29"
+    trigger: "One schedule execution throws"
+    outcome: "Error logged; loop continues; row remains eligible per transaction state."
+    contract: "Worker does not fail entire poll batch."
+    must_preserve: true
+concurrency:
+  model: thread-pool
+  tx_boundary:
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduleService.java:66"
+    scope: "Schedule lock, account lock, transaction operation, and terminal status."
+    isolation: "pessimistic row locks"
+    must_preserve: true

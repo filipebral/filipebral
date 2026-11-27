@@ -1,0 +1,7 @@
+unit: backend-split-event-consumer
+commit: false
+candidate_splits:
+  - id: giro-app/backend/src/main/java/com/giro_app/backend/SplitBillListener.java:11-24
+    drivers: [protocol_split, concern_split, execution_model_split]
+    rationale: "Broker deserialization, split calculation, and future provider command execution require separate idempotency and retry ownership."
+    source_slice: {file: giro-app/backend/src/main/java/com/giro_app/backend/SplitBillListener.java, lines: [11, 24]}

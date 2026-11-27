@@ -1,0 +1,15 @@
+unit: backend-simulation-worker
+bindings:
+  - type: annotation
+    name: "@Scheduled(fixedDelayString=...)"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduler.java:24"
+    target: "executeDue"
+    must_appear_in_target: true
+    notes: "Scheduling enabled by the component itself."
+runtime_config:
+  - key: app.simulation.scheduler-delay-ms
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationScheduler.java:24"
+    source: annotation
+    default_value: "30000"
+    must_appear_in_target: true
+    notes: "Fixed delay."

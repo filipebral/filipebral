@@ -1,0 +1,7 @@
+unit: next-auth-bff
+commit: false
+candidate_splits:
+  - id: giro-app/lib/auth-server.ts:6-48
+    drivers: [protocol_split, concern_split]
+    rationale: "Backend response mapping and browser cookie lifecycle are distinct protocols that can be hardened independently."
+    source_slice: {file: giro-app/lib/auth-server.ts, lines: [6, 48]}

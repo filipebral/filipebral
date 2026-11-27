@@ -1,0 +1,7 @@
+unit: backend-account-provider-api
+commit: false
+candidate_splits:
+  - id: giro-app/backend/src/main/java/com/giro_app/backend/CreateAccountUseCase.java:23-57
+    drivers: [protocol_split, execution_model_split, nfr_split]
+    rationale: "Local persistence, provider network call, and event publication have different atomicity and failure semantics."
+    source_slice: {file: giro-app/backend/src/main/java/com/giro_app/backend/CreateAccountUseCase.java, lines: [23, 57]}

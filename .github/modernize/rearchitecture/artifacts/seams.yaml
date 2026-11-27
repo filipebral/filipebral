@@ -1,0 +1,61 @@
+seams:
+  - id: giro-app/lib/auth-server.ts:6
+    description: "Next.js same-origin BFF owns the HttpOnly cookie; Spring Boot owns token issue/validation."
+    source: declared
+    cut_between:
+      migrated_side: next-auth-bff
+      frozen_side: backend-auth-api
+    protocol_shift: {from: cookie, to: bearer-jwt}
+    frozen_side_rule: "Spring must continue accepting the existing JWT claims and /api/auth request/response shapes unless a later approved contract evolution is completed."
+    bridge_points:
+      - at: "giro-app/lib/auth-server.ts:16"
+        from_form: "browser JSON POST with no token"
+        to_form: "POST Spring /api/auth/{action} then HttpOnly giro_access_token response cookie"
+        mapping_rule: "Forward cpf/name/password; expose only user; copy backend token into HttpOnly cookie; preserve backend 4xx/5xx status and safe message."
+        edge_cases:
+          - "Malformed backend JSON returns 502."
+          - "Missing token/expiresIn/user returns 502."
+          - "Expired or invalid cookie redirects /dashboard to / and clears cookie."
+        idempotency_retry: "Auth actions are not automatically retried; callers submit once per form interaction."
+        fallback: "Backend unavailable returns 502 from the BFF; do not create a local session."
+        must_preserve: true
+  - id: giro-app/backend/src/main/java/com/giro_app/backend/CreateAccountUseCase.java:23
+    description: "Account use case is provider-agnostic behind BaaSGateway; real transport remains gated."
+    source: declared
+    cut_between:
+      migrated_side: backend-account-provider-api
+      frozen_side: backend-mock-baas-api
+    protocol_shift: {from: gateway-method, to: rest}
+    frozen_side_rule: "The mock BaaS contract and provider adapter boundary must remain usable in tests; no worker may embed a provider-specific SDK in controllers/use cases."
+    bridge_points:
+      - at: "giro-app/backend/src/main/java/com/giro_app/backend/BaaSGatewayImpl.java:13"
+        from_form: "createAccountForCustomer(baasCustomerId)"
+        to_form: "POST {baas.api.url}/accounts {customerId,accountType:CHECKING}"
+        mapping_rule: "Map response fields exactly into Account activation; keep provider payload and response behind BaaSGateway."
+        edge_cases:
+          - "BAAS_ENABLED=false returns 503 before provider call."
+          - "Provider timeout/error returns generic 500 and must not claim success."
+          - "No real money operation exists in this seam."
+        idempotency_retry: "A real provider contract must define an idempotency key before enabling automatic retry; current path has no automatic retry."
+        fallback: "Keep operation disabled/simulated; never move money without configured approved provider."
+        must_preserve: true
+  - id: giro-app/backend/src/main/java/com/giro_app/backend/SplitBillListener.java:11
+    description: "Rabbit event consumer is a future cut from provider-aware split execution."
+    source: declared
+    cut_between:
+      migrated_side: backend-split-event-consumer
+      frozen_side: backend-account-provider-api
+    protocol_shift: {from: rabbitmq-json, to: provider-gateway}
+    frozen_side_rule: "Provider transfer behavior must remain behind BaaSGateway/provider-safe test doubles; listener auto-start remains disabled until configured."
+    bridge_points:
+      - at: "giro-app/backend/src/main/java/com/giro_app/backend/SplitBillListener.java:12"
+        from_form: "TransactionCreatedEvent{accountId,amount,category}"
+        to_form: "future provider-safe internal split command; no current real transfer contract"
+        mapping_rule: "Validate event, resolve active split group, calculate shares using 100%/HALF_EVEN rules, then call an explicit provider interface only if configured."
+        edge_cases:
+          - "Unknown group or invalid amounts fail safely without provider call."
+          - "Provider unavailable preserves event for retry only after idempotency is defined."
+          - "No simulated event may cross into a real provider."
+        idempotency_retry: "Require a stable event/transaction id and provider idempotency key before enabling redelivery-driven retries."
+        fallback: "Keep listener disabled; log/drop into explicit dead-letter workflow only after contract approval."
+        must_preserve: true

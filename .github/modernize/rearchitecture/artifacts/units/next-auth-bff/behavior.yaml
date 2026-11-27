@@ -1,0 +1,34 @@
+unit: next-auth-bff
+side_effects:
+  - source_loc: "giro-app/lib/auth-server.ts:40"
+    effect: "Sets HttpOnly, SameSite=Lax, Path=/ giro_access_token cookie with maxAge from expiresIn."
+    must_preserve: true
+  - source_loc: "giro-app/app/api/auth/logout/route.ts:5"
+    effect: "Expires the access cookie."
+    must_preserve: true
+branches:
+  - source_loc: "giro-app/lib/auth-server.ts:7"
+    condition: "request JSON cannot be parsed"
+    behavior: "Return 400 invalid body response."
+    must_preserve: true
+  - source_loc: "giro-app/lib/auth-server.ts:34"
+    condition: "backend response is non-2xx"
+    behavior: "Return same status and safe backend message/detail."
+    must_preserve: true
+  - source_loc: "giro-app/lib/auth-server.ts:39"
+    condition: "backend success lacks token/expiresIn/user"
+    behavior: "Return 502 without creating a cookie."
+    must_preserve: true
+error_paths:
+  - source_loc: "giro-app/lib/auth-server.ts:23"
+    trigger: "Backend fetch throws"
+    outcome: "Return {message:'Serviço de autenticação indisponível.'}, 502."
+    contract: "JSON message; no token leakage."
+    must_preserve: true
+concurrency:
+  model: event-loop
+  tx_boundary:
+    source_loc: "giro-app/lib/auth-server.ts:16"
+    scope: "One backend call followed by cookie mutation on the matching browser response."
+    isolation: "single request"
+    must_preserve: true

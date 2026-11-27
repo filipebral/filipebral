@@ -6,41 +6,23 @@ import CreateSplitGroupModal from "@/components/CreateSplitGroupModal";
 import ProcessSplitModal from "@/components/ProcessSplitModal";
 import SimulationPanel from "@/components/SimulationPanel";
 import FinancialSimulators from "@/components/FinancialSimulators";
+import SimulationCardPanel from "@/components/SimulationCardPanel";
+import FinancialOrganizationPanel from "@/components/FinancialOrganizationPanel";
+import SplitGroupsPanel from "@/components/SplitGroupsPanel";
+import ProviderReadinessPanel from "@/components/ProviderReadinessPanel";
+import BusinessApplicationPanel from "@/components/BusinessApplicationPanel";
 
 export default function Dashboard() {
   const router = useRouter();
-  const [customerId, setCustomerId] = useState("");
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
+  const [groupRefreshKey, setGroupRefreshKey] = useState(0);
+  const [simulationRefreshKey, setSimulationRefreshKey] = useState(0);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/");
-  };
-
-  const handleCreateAccount = async () => {
-    setLoading(true);
-    setMessage(null);
-    setError(null);
-    try {
-      const response = await fetch("/api/proxy/accounts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ baasCustomerId: customerId }),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.message || "Não foi possível criar a conta bancária.");
-      }
-      setMessage("Conta bancária criada e vinculada ao Giro.");
-    } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Erro ao criar a conta.");
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -61,18 +43,18 @@ export default function Dashboard() {
             <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Saldo disponível</span>
             <span className="text-xs text-zinc-400 bg-white/5 px-2.5 py-1 rounded-full border border-white/10 font-semibold">Integração pendente</span>
           </div>
-          <div className="text-sm text-zinc-400 mb-6">Saldo real indisponível sem integração bancária.</div>
-          <label htmlFor="customer-id" className="block text-xs text-zinc-400 mb-2">Identificador do cliente no BaaS</label>
-          <input id="customer-id" value={customerId} onChange={(event) => setCustomerId(event.target.value)} className="w-full bg-[#18181b] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm mb-3" />
+          <p className="text-sm text-zinc-400">Conta e saldo reais indisponíveis. Nenhum provedor bancário está conectado.</p>
           {message && <p role="status" className="mb-3 text-xs text-emerald-400">{message}</p>}
-          {error && <p role="alert" className="mb-3 text-xs text-red-400">{error}</p>}
-          <button onClick={handleCreateAccount} disabled={loading || !customerId.trim()} className="w-full bg-[#00FF66] hover:bg-[#00cc52] text-black py-3.5 px-4 rounded-2xl text-xs font-extrabold disabled:opacity-50">
-            {loading ? "Processando..." : "Criar conta & vincular BaaS"}
-          </button>
+          <button type="button" disabled className="mt-4 w-full cursor-not-allowed rounded-2xl border border-white/10 py-3.5 text-xs font-bold text-zinc-500">Abertura de conta real indisponível</button>
         </section>
 
-        <SimulationPanel />
+        <SimulationPanel refreshKey={simulationRefreshKey} onChanged={() => setSimulationRefreshKey((key) => key + 1)} />
         <FinancialSimulators />
+        <SimulationCardPanel refreshKey={simulationRefreshKey} onChanged={() => setSimulationRefreshKey((key) => key + 1)} />
+        <FinancialOrganizationPanel refreshKey={simulationRefreshKey} onChanged={() => setSimulationRefreshKey((key) => key + 1)} />
+        <SplitGroupsPanel refreshKey={groupRefreshKey} />
+        <ProviderReadinessPanel />
+        <BusinessApplicationPanel />
 
         <div className="grid grid-cols-2 gap-3">
           <button onClick={() => setIsGroupModalOpen(true)} className="bg-[#121214] border border-[#00FF66]/30 p-4 rounded-2xl text-sm font-bold text-[#00FF66]">Novo rateio</button>
@@ -85,8 +67,8 @@ export default function Dashboard() {
         </section>
       </div>
 
-      <CreateSplitGroupModal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} onSuccess={() => setMessage("Grupo de rateio criado com sucesso.")} />
-      <ProcessSplitModal isOpen={isProcessModalOpen} onClose={() => setIsProcessModalOpen(false)} />
+      <CreateSplitGroupModal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} onSuccess={() => { setMessage("Grupo de rateio criado com sucesso."); setGroupRefreshKey((key) => key + 1); }} />
+      <ProcessSplitModal isOpen={isProcessModalOpen} onClose={() => setIsProcessModalOpen(false)} onSuccess={() => setGroupRefreshKey((key) => key + 1)} />
     </main>
   );
 }

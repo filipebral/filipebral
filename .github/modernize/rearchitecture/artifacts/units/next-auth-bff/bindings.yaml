@@ -1,0 +1,15 @@
+unit: next-auth-bff
+bindings:
+  - type: route-declaration
+    name: "Next route POST login/register/logout"
+    source_loc: "giro-app/app/api/auth/login/route.ts:4"
+    target: "authenticate and logout"
+    must_appear_in_target: true
+    notes: "Same-origin BFF contract remains browser-visible."
+runtime_config:
+  - key: GIRO_BACKEND_URL
+    source_loc: "giro-app/lib/auth-server.ts:4"
+    source: env
+    default_value: "http://localhost:8080"
+    must_appear_in_target: true
+    notes: "Spring base URL; server-side only."

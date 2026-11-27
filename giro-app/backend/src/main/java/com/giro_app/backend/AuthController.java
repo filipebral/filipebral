@@ -7,15 +7,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
+    private final AuditEventRepository auditEvents;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, AuditEventRepository auditEvents) {
         this.authService = authService;
+        this.auditEvents = auditEvents;
     }
 
     @PostMapping("/register")
@@ -25,6 +28,17 @@ public class AuthController {
 
     @PostMapping("/login")
     public AuthResponseDTO login(@Valid @RequestBody LoginRequestDTO request) {
-        return authService.login(request);
+        AuthResponseDTO response;
+        try {
+            response = authService.login(request);
+        } catch (ResponseStatusException exception) {
+            if (exception.getStatusCode().equals(HttpStatus.UNAUTHORIZED)
+                    || exception.getStatusCode().equals(HttpStatus.BAD_REQUEST)) {
+                auditEvents.save(new AuditEvent(null, "LOGIN_REJECTED", null));
+            }
+            throw exception;
+        }
+        auditEvents.save(new AuditEvent(response.user().id(), "LOGIN_SUCCEEDED", null));
+        return response;
     }
 }

@@ -1,0 +1,42 @@
+user_intent:
+  raw_request: "Resume six-wave Giro banking MVP completion, begin with security/session/recovery/KYC-ready onboarding, preserve current Next.js and Spring Boot 3, no provider movement, no commit."
+  inferred_acceptance:
+    - "External API shapes remain compatible."
+    - "Existing cookie/JWT flow is retained and hardened."
+    - "Provider operations remain simulated/unavailable until configured."
+    - "WCAG 2.1 AA and mobile-first styling/tokens are preserved."
+    - "Existing tests pass and actual implementation is performed by assigned implementation roles."
+  cleanup_required: false
+strategy: phased
+runtime_reachable:
+  - giro-app/app/
+  - giro-app/components/
+  - giro-app/lib/
+  - giro-app/backend/src/main/
+must_rewrite:
+  - path: giro-app/app/
+    reason: "Wave implementation requires current App Router screens and BFF routes for onboarding/session recovery and capability UI."
+  - path: giro-app/components/
+    reason: "Current reusable dashboard experiences require accessibility and capability completion changes."
+  - path: giro-app/backend/src/main/
+    reason: "Wave implementation requires Spring Security, onboarding/session/recovery, provider-safe boundaries, and schema/API evolution."
+copy_as_is:
+  - giro-app/lib/financial-simulations.ts
+  - giro-app/backend/src/main/resources/db/migration/V1__create_initial_schema.sql
+  - giro-app/backend/src/main/resources/db/migration/V2__add_auth_and_sensitive_fields.sql
+  - giro-app/backend/src/main/resources/db/migration/V3__add_cpf_authentication.sql
+  - giro-app/backend/src/main/resources/db/migration/V4__create_simulation_tables.sql
+  - giro-app/backend/src/main/resources/db/migration/V5__create_simulation_schedules.sql
+  - giro-app/backend/src/main/resources/db/migration/V6__create_simulation_bills.sql
+legacy_allowed_to_remain:
+  - workspace-root app/
+  - workspace-root backend/
+  - workspace-root components/
+  - workspace-root lib/
+defer_cleanup:
+  - "Do not remove or reorganize duplicate untracked workspace-root copies during architecture analysis."
+  - "Remove or consolidate stale generated/development artifacts only after a later design decision; they are not required for Wave 1."
+full_rewrite_reason: null
+implementation_rule: >
+  Implementation scope is selected from must_rewrite plus copy_as_is. Source anchors prove behavior but are not a rewrite mandate.
+  The tracked and runnable root is giro-app/. Architect artifacts are documentation-only; backend/frontend workers own source edits.

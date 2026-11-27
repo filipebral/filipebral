@@ -19,7 +19,8 @@ class SimulationServiceTest {
     private final AppUserRepository users = org.mockito.Mockito.mock(AppUserRepository.class);
     private final SimulationAccountRepository accounts = org.mockito.Mockito.mock(SimulationAccountRepository.class);
     private final SimulationTransactionRepository transactions = org.mockito.Mockito.mock(SimulationTransactionRepository.class);
-    private final SimulationService service = new SimulationService(users, accounts, transactions);
+    private final AuditEventRepository auditEvents = org.mockito.Mockito.mock(AuditEventRepository.class);
+    private final SimulationService service = new SimulationService(users, accounts, transactions, auditEvents);
     private final UUID user = UUID.randomUUID();
     private final UUID requestId = UUID.randomUUID();
     private final SimulationAccount account = new SimulationAccount(user);
@@ -27,6 +28,7 @@ class SimulationServiceTest {
     @BeforeEach
     void setUp() {
         when(accounts.findForUpdate(user)).thenReturn(Optional.of(account));
+        org.mockito.Mockito.lenient().when(transactions.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -44,6 +46,7 @@ class SimulationServiceTest {
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, error.getStatusCode());
         assertEquals(new BigDecimal("0.00"), account.getBalance());
         verify(transactions, never()).save(any());
+        verify(auditEvents, never()).save(any());
     }
 
     @Test

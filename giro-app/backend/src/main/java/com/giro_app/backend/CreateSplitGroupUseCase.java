@@ -16,9 +16,7 @@ public class CreateSplitGroupUseCase {
 
     @Transactional
     public SplitGroup execute(CreateSplitGroupRequestDTO request, UUID ownerUserId) {
-        var memberInputs = request.members().stream()
-                .map(m -> new SplitGroup.GroupMemberInput(m.userId(), m.percentage()))
-                .collect(Collectors.toList());
+        var memberInputs = SplitGroupService.inputs(request);
 
         SplitGroup group = new SplitGroup(ownerUserId, request.name(), memberInputs);
         return splitGroupRepository.save(group);

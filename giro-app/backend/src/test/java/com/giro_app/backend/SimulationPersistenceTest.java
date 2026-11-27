@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
@@ -35,6 +36,8 @@ class SimulationPersistenceTest {
     @Autowired private SimulationScheduleService scheduleService;
     @Autowired private SimulationScheduleRepository schedules;
     @Autowired private SimulationBillService billService;
+    @Autowired private SimulationAccountRepository accounts;
+    @Autowired private AuditEventRepository auditEvents;
 
     @Test
     void persistsSeparatelyAndSerializesConcurrentDebits() throws Exception {
@@ -98,6 +101,44 @@ class SimulationPersistenceTest {
     }
 
     @Test
+    void scheduledPixFailsWhenAvailableBalanceIsReserved() {
+        UUID user = users.saveAndFlush(new AppUser(null, null, "Reserva", "hash")).getId();
+        service.create(user);
+        service.operate(user, UUID.randomUUID(), new BigDecimal("10.00"), "CREDIT", null);
+        SimulationAccount account = accounts.findById(user).orElseThrow();
+        account.setReservedBalance(new BigDecimal("8.00"));
+        accounts.saveAndFlush(account);
+        SimulationSchedule due = schedules.saveAndFlush(new SimulationSchedule(
+                user, UUID.randomUUID(), new BigDecimal("3.00"), "Fictício", Instant.now().minusSeconds(1)));
+        scheduleService.execute(due.getId());
+        assertEquals("FAILED", schedules.findById(due.getId()).orElseThrow().getStatus());
+        assertEquals(new BigDecimal("10.00"), service.account(user).balance());
+        assertEquals(1, service.statement(user).size());
+    }
+
+    @Test
+    void operationLookupAndHistoryAreScopedAndIdempotent() {
+        UUID user = users.saveAndFlush(new AppUser(null, null, "Titular", "hash")).getId();
+        UUID other = users.saveAndFlush(new AppUser(null, null, "Outro", "hash")).getId();
+        service.create(user);
+        service.create(other);
+        UUID request = UUID.randomUUID();
+        service.operate(user, request, new BigDecimal("10.00"), "CREDIT", null);
+        service.operate(user, request, new BigDecimal("10.00"), "CREDIT", null);
+        service.operate(user, UUID.randomUUID(), BigDecimal.ONE, "PIX", "Fictício");
+
+        assertEquals("CREDIT", service.operation(user, request).type());
+        assertThrows(ResponseStatusException.class, () -> service.operation(other, request));
+        var firstPage = service.history(user, 0, 1);
+        assertEquals(1, firstPage.items().size());
+        assertEquals(true, firstPage.hasNext());
+        assertEquals(1, service.history(user, 1, 1).items().size());
+        assertEquals(0, service.history(other, 0, 10).items().size());
+        assertEquals(2, auditEvents.findAll().stream()
+                .filter(event -> Objects.equals(event.getActorUserId(), user)).count());
+    }
+
+    @Test
     void creationIsIdempotentAndOnlyOwnerCanCancel() {
         UUID user = users.saveAndFlush(new AppUser(null, null, "Titular", "hash")).getId();
         service.create(user);
@@ -110,8 +151,15 @@ class SimulationPersistenceTest {
                 () -> scheduleService.create(user, requestId, BigDecimal.TEN, "Fictício", time));
         assertThrows(ResponseStatusException.class, () -> scheduleService.cancel(UUID.randomUUID(), first.id()));
         assertEquals("CANCELLED", scheduleService.cancel(user, first.id()).status());
+        assertEquals("CANCELLED", scheduleService.cancel(user, first.id()).status());
         scheduleService.execute(first.id());
         assertEquals("CANCELLED", scheduleService.list(user).get(0).status());
+        assertEquals(1, auditEvents.findAll().stream().filter(event ->
+                Objects.equals(event.getResourceId(), first.id())
+                        && event.getEventType().equals("SIMULATION_SCHEDULE_CREATED")).count());
+        assertEquals(1, auditEvents.findAll().stream().filter(event ->
+                Objects.equals(event.getResourceId(), first.id())
+                        && event.getEventType().equals("SIMULATION_SCHEDULE_CANCELLED")).count());
     }
 
     @Test
@@ -130,5 +178,8 @@ class SimulationPersistenceTest {
         billService.pay(user, bill.id());
         assertEquals(new BigDecimal("2.00"), service.account(user).balance());
         assertEquals(2, service.statement(user).size());
+        assertEquals(1, auditEvents.findAll().stream().filter(event ->
+                Objects.equals(event.getResourceId(), bill.id())
+                        && event.getEventType().equals("SIMULATION_BILL_PAID")).count());
     }
 }

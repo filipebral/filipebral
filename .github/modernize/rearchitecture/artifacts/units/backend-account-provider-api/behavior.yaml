@@ -1,0 +1,27 @@
+unit: backend-account-provider-api
+side_effects:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/CreateAccountUseCase.java:27"
+    effect: "Saves PENDING account, calls provider, changes to ACTIVE, saves, and publishes AccountCreatedEvent."
+    must_preserve: true
+branches:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AccountController.java:33"
+    condition: "baas.enabled is false"
+    behavior: "Return 503 before creating or calling provider."
+    must_preserve: true
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/Account.java:54"
+    condition: "Account is not PENDING"
+    behavior: "Activation throws IllegalStateException."
+    must_preserve: true
+error_paths:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/CreateAccountUseCase.java:52"
+    trigger: "Provider or event call throws"
+    outcome: "Generic RuntimeException rolls back DB transaction; provider side effect may already have happened."
+    contract: "Current external response becomes generic 500; recovery/idempotency is unresolved."
+    must_preserve: true
+concurrency:
+  model: sync
+  tx_boundary:
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/CreateAccountUseCase.java:23"
+    scope: "PENDING/ACTIVE account persistence around external HTTP call and event publication."
+    isolation: "database default; no distributed transaction"
+    must_preserve: true

@@ -1,0 +1,15 @@
+unit: next-auth-experience
+bindings:
+  - type: route-declaration
+    name: "Next App Router /"
+    source_loc: "giro-app/app/page.tsx:6"
+    target: "Home"
+    must_appear_in_target: true
+    notes: "Client page; preserve existing dark/mobile-first utility classes and form labels."
+  - type: convention
+    name: "useRouter().replace"
+    source_loc: "giro-app/app/page.tsx:30"
+    target: "/dashboard"
+    must_appear_in_target: true
+    notes: "Successful auth must not leave login in browser history."
+runtime_config: []

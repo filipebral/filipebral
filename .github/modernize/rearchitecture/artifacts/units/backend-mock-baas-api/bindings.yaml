@@ -1,0 +1,21 @@
+unit: backend-mock-baas-api
+bindings:
+  - type: annotation
+    name: "@FeignClient(name=baasClient)"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/BaaSFeignClient.java:7"
+    target: "POST /accounts"
+    must_appear_in_target: true
+    notes: "Provider adapter selected by URL."
+  - type: annotation
+    name: "@Profile(!prod)"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/BaasMockController.java:10"
+    target: "mock controller"
+    must_appear_in_target: true
+    notes: "Test double must never be exposed by production."
+runtime_config:
+  - key: baas.api.url
+    source_loc: "giro-app/backend/src/main/resources/application.yaml:5"
+    source: properties-file
+    default_value: "http://localhost:8080/mock-baas"
+    must_appear_in_target: true
+    notes: "Real or test provider base."

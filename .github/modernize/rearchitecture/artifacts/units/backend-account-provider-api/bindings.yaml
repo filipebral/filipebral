@@ -1,0 +1,27 @@
+unit: backend-account-provider-api
+bindings:
+  - type: annotation
+    name: "@RequestMapping /accounts"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AccountController.java:13"
+    target: "createAccount"
+    must_appear_in_target: true
+    notes: "Authenticated account-opening surface."
+  - type: di-registration
+    name: "AccountRepository, BaaSGateway, EventPublisher"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/CreateAccountUseCase.java:13"
+    target: "CreateAccountUseCase"
+    must_appear_in_target: true
+    notes: "Provider and event seams must remain replaceable."
+runtime_config:
+  - key: baas.enabled
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AccountController.java:17"
+    source: env
+    default_value: "false"
+    must_appear_in_target: true
+    notes: "Hard gate for account/provider operation."
+  - key: baas.api.url
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/BaaSFeignClient.java:7"
+    source: properties-file
+    default_value: "http://localhost:8080/mock-baas"
+    must_appear_in_target: true
+    notes: "Provider base URL."

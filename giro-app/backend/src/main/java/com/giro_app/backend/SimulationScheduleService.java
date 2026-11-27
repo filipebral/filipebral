@@ -17,12 +17,14 @@ public class SimulationScheduleService {
     private final SimulationAccountRepository accounts;
     private final SimulationScheduleRepository schedules;
     private final SimulationService operations;
+    private final AuditEventRepository auditEvents;
 
     public SimulationScheduleService(SimulationAccountRepository accounts, SimulationScheduleRepository schedules,
-                                     SimulationService operations) {
+                                     SimulationService operations, AuditEventRepository auditEvents) {
         this.accounts = accounts;
         this.schedules = schedules;
         this.operations = operations;
+        this.auditEvents = auditEvents;
     }
 
     @Transactional
@@ -43,7 +45,9 @@ public class SimulationScheduleService {
         if (scheduledAt == null || !scheduledAt.isAfter(Instant.now())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe uma data futura para o agendamento.");
         }
-        return ScheduleView.from(schedules.save(new SimulationSchedule(userId, requestId, amount, name, scheduledAt)));
+        SimulationSchedule schedule = schedules.save(new SimulationSchedule(userId, requestId, amount, name, scheduledAt));
+        auditEvents.save(new AuditEvent(userId, "SIMULATION_SCHEDULE_CREATED", schedule.getId()));
+        return ScheduleView.from(schedule);
     }
 
     @Transactional(readOnly = true)
@@ -60,6 +64,7 @@ public class SimulationScheduleService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "O agendamento já foi processado.");
         }
         schedule.setStatus("CANCELLED");
+        auditEvents.save(new AuditEvent(userId, "SIMULATION_SCHEDULE_CANCELLED", schedule.getId()));
         return ScheduleView.from(schedule);
     }
 
@@ -68,12 +73,14 @@ public class SimulationScheduleService {
         SimulationSchedule schedule = schedules.findForUpdate(id).orElseThrow();
         if (!"PENDING".equals(schedule.getStatus()) || schedule.getScheduledAt().isAfter(Instant.now())) return;
         SimulationAccount account = accounts.findForUpdate(schedule.getUserId()).orElseThrow();
-        if (account.getBalance().compareTo(schedule.getAmount()) < 0) {
+        if (account.getAvailableBalance().compareTo(schedule.getAmount()) < 0) {
             schedule.setStatus("FAILED");
+            auditEvents.save(new AuditEvent(schedule.getUserId(), "SIMULATION_SCHEDULE_FAILED", schedule.getId()));
             return;
         }
         operations.operate(schedule.getUserId(), schedule.getExecutionId(), schedule.getAmount(), "PIX", schedule.getDestination());
         schedule.setStatus("COMPLETED");
+        auditEvents.save(new AuditEvent(schedule.getUserId(), "SIMULATION_SCHEDULE_COMPLETED", schedule.getId()));
     }
 
     public record ScheduleView(UUID id, BigDecimal amount, String destination, Instant scheduledAt, String status) {

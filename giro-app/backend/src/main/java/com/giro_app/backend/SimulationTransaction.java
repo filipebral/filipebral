@@ -34,6 +34,9 @@ public class SimulationTransaction {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(length = 30)
+    private String category;
+
     protected SimulationTransaction() {}
 
     public SimulationTransaction(UUID userId, UUID requestId, String type, BigDecimal amount, String description) {
@@ -51,4 +54,6 @@ public class SimulationTransaction {
     public BigDecimal getAmount() { return amount; }
     public String getDescription() { return description; }
     public Instant getCreatedAt() { return createdAt; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 }

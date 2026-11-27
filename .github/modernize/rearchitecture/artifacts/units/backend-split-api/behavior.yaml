@@ -1,0 +1,30 @@
+unit: backend-split-api
+side_effects:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/CreateSplitGroupUseCase.java:17"
+    effect: "Persists owner, group, and all member rows in one transaction."
+    must_preserve: true
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/ProcessSplitTransactionUseCase.java:27"
+    effect: "Calculates shares and persists a split transaction record."
+    must_preserve: true
+branches:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitGroup.java:37"
+    condition: "Members absent or percentages do not equal exactly 100.00"
+    behavior: "Reject group with 400."
+    must_preserve: true
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/ProcessSplitTransactionUseCase.java:31"
+    condition: "JWT subject is not group owner"
+    behavior: "Return 403 and persist nothing."
+    must_preserve: true
+error_paths:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/ProcessSplitTransactionUseCase.java:29"
+    trigger: "Split group is missing"
+    outcome: "IllegalArgumentException mapped to 400."
+    contract: "Current frontend reads message; future 404 would be behavior change."
+    must_preserve: true
+concurrency:
+  model: sync
+  tx_boundary:
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/ProcessSplitTransactionUseCase.java:27"
+    scope: "Owner authorization, share calculation, and transaction record persistence."
+    isolation: "database default"
+    must_preserve: true

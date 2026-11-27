@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "split_groups")
@@ -29,14 +31,36 @@ public class SplitGroup {
     public SplitGroup(UUID ownerUserId, String name, List<GroupMemberInput> inputMembers) {
         this.id = UUID.randomUUID();
         this.ownerUserId = ownerUserId;
-        this.name = name;
+        this.name = validateName(name);
         
         validateAndAddMembers(inputMembers);
+    }
+
+    public void update(String name, List<GroupMemberInput> inputMembers) {
+        this.name = validateName(name);
+        this.members.clear();
+        validateAndAddMembers(inputMembers);
+    }
+
+    private String validateName(String value) {
+        if (value == null || value.isBlank() || value.trim().length() > 80) {
+            throw new IllegalArgumentException("O nome do grupo deve ter entre 1 e 80 caracteres.");
+        }
+        return value.trim();
     }
 
     private void validateAndAddMembers(List<GroupMemberInput> inputMembers) {
         if (inputMembers == null || inputMembers.isEmpty()) {
             throw new IllegalArgumentException("O grupo de divisão deve ter pelo menos um membro.");
+        }
+
+        Set<UUID> memberIds = new HashSet<>();
+        for (GroupMemberInput input : inputMembers) {
+            if (input == null || input.userId() == null || input.percentage() == null
+                    || input.percentage().signum() <= 0 || input.percentage().scale() > 2
+                    || !memberIds.add(input.userId())) {
+                throw new IllegalArgumentException("Participantes devem ser únicos e ter cotas positivas de até duas casas decimais.");
+            }
         }
 
         BigDecimal totalPercentage = inputMembers.stream()

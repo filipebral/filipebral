@@ -1,0 +1,21 @@
+unit: next-dashboard-experience
+bindings:
+  - type: route-declaration
+    name: "Next App Router /dashboard"
+    source_loc: "giro-app/app/dashboard/page.tsx:10"
+    target: "Dashboard"
+    must_appear_in_target: true
+    notes: "Protected by proxy.ts matcher."
+  - type: convention
+    name: "client component callbacks"
+    source_loc: "giro-app/app/dashboard/page.tsx:80"
+    target: "simulation/split modal controls"
+    must_appear_in_target: true
+    notes: "Preserve existing component-level state and mobile-first one-column layout."
+  - type: route-declaration
+    name: "same-origin proxy calls"
+    source_loc: "giro-app/components/SimulationPanel.tsx:16"
+    target: "/api/proxy/simulation/*"
+    must_appear_in_target: true
+    notes: "No direct browser call to Spring."
+runtime_config: []

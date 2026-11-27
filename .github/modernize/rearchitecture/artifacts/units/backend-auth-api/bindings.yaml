@@ -1,0 +1,21 @@
+unit: backend-auth-api
+bindings:
+  - type: annotation
+    name: "@RequestMapping /api/auth and Jakarta @Valid"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthController.java:12"
+    target: "register/login DTO methods"
+    must_appear_in_target: true
+    notes: "Current public REST shape."
+  - type: di-registration
+    name: "PasswordEncoder, JwtEncoder, AppUserRepository"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthService.java:23"
+    target: "AuthService"
+    must_appear_in_target: true
+    notes: "Constructor injection."
+runtime_config:
+  - key: app.security.jwt.secret-base64
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SecurityConfig.java:35"
+    source: properties-file
+    default_value: "${GIRO_JWT_SECRET_BASE64}"
+    must_appear_in_target: true
+    notes: "At least 32 bytes; shared with Next."

@@ -6,15 +6,57 @@ The backend provides CPF/password registration and login. Passwords are stored a
 
 The CPF check-digit validation is only a format check; it does not verify identity or open a bank account. Existing email-only users are not assigned a CPF automatically. No legacy-account migration/recovery flow is implemented yet, so those users cannot log in until a verified migration flow is added and completed. A real financial account requires a contracted BaaS/banking provider, its approved onboarding and KYC flow, and securely configured API credentials. The current mock BaaS is not a real bank integration; do not enable it for production onboarding.
 
+New personal registrations require an authoritative regular CPF result matching the CPF and birth date. `TaxRegistrationVerificationPort` defines the future CPF and CNPJ lookup boundary; no adapter is registered, so new registrations return 503 until a provider is implemented and configured. Existing CPF/password logins are unchanged. Birth dates are passed only for verification and are not stored by the application. A provider must fail closed on errors, mismatches and inconclusive results.
+
+Serpro is one potential provider: [Consulta CPF v3](https://centraldeajuda.serpro.gov.br/duvidas/pt/avisos/avisoconsultacpfv3/) requires CPF and birth date, and [Consulta CNPJ](https://loja.serpro.gov.br/consulta-cnpj/product/consultacnpj) provides company registry information. Provider selection, contracting where required, credentials, actual adapters, response-contract verification, safeguards against lookup abuse, and privacy review remain necessary. No real lookup occurs today. CNPJ verification must require an active registration, and business access must additionally verify the representative's identity and authority.
+
+### Future business access
+
+Business login remains unavailable. An authenticated personal user can register one pending business application in the dashboard or via `POST /api/business-applications` with `{"cnpj":"..."}` and retrieve their own via `GET /api/business-applications/current`. CNPJs are normalized and encrypted at rest. The application cannot yet be edited or deleted; no documents are collected and no verification is initiated. Personal registration itself remains unavailable without a CPF verifier. The default in-memory H2 database loses applications when the backend stops.
+
+`CnpjValidator` checks format and check digits for numeric and alphanumeric CNPJs but does not establish existence, active status, identity, or authority. `TaxRegistrationVerificationPort` and `BusinessVerificationProviderPort` are unimplemented boundaries. `POST /api/business-applications/current/verification` records a request once and reports all three checks as `WAITING_FOR_PROVIDER`. It does not collect documents, contact a provider or grant access. Applications remain pending indefinitely. Merely configuring an adapter will not process or approve them. The future workflow must bind provider results to the application and applicant, verify active status, representative identity and authority, and grant access only after a verified decision. Pending, rejected, unavailable or inconclusive verification must not grant access. Implement secure collection, auditability, retention, correction/deletion, authentication and authorization before enabling the flow. Business access is separate from opening a real banking account.
+
 ### Account and Pix simulation
 
-The dashboard offers a separate simulated account, fictitious balance, the last 50 simulated transactions, simulated receipts and simulated Pix, transfer and bill debits. Simulated bills accept only a fictitious description, amount and due date, not a barcode. Users can add fictitious balance and specify a fictional recipient name; no provider is contacted, no real money moves, and no recipient is credited. Do not enter real Pix keys, barcodes or personal information. Simulation data is stored separately from real account data and is never a source of truth for a banking provider.
+The dashboard offers a separate simulated account, fictitious balance, paginated simulated transactions, simulated receipts and simulated Pix, transfer and bill debits. Simulated bills accept only a fictitious description, amount and due date, not a barcode. Users can add fictitious balance and specify a fictional recipient name; no provider is contacted, no real money moves, and no recipient is credited. Do not enter real Pix keys, barcodes or personal information. Simulation data is stored separately from real account data and is never a source of truth for a banking provider.
 
 The authenticated `/simulation` endpoints are available in production as well as development; set `APP_SIMULATION_ENABLED=false` to disable them. Each credit, Pix or scheduled Pix request uses a user-scoped `requestId` for safe retries; reusing it for different operation details is rejected. Simulated Pix schedules are checked every 30 seconds while the backend is running; overdue schedules are processed after it restarts. Insufficient fictitious balance marks the schedule as failed without retry. A schedule is processed atomically and only once, including across backend instances.
+
+`GET /simulation/history?page=0&size=50` provides paginated simulated transaction history, and `GET /simulation/operations/{requestId}` retrieves a completed simulated operation for its authenticated owner. A 404 does not prove that a concurrent request cannot still complete. Retry only with the original request ID; the current dashboard keeps pending IDs in memory, not across page reloads. These endpoints do not track real payments or reconcile with a provider.
+
+The simulation reconciliation queue registers request IDs through `POST /simulation/reconciliation` with `{"requestId":"<uuid>"}`. `GET /simulation/reconciliation` lists the authenticated owner's checks. A background worker checks only committed simulated balance transactions. A missing transaction remains `UNKNOWN`, even if the request may still be in flight. `/simulation/reconciliation/{id}/check` requests a new check and `/stop` stops monitoring without cancelling the underlying operation or proving failure. Registering the same ID resumes a stopped check. At most 50 unknown checks per user may be active. The queue never submits or retries payments, cannot reconcile a real provider, and cannot recover original operation inputs. The dashboard registers checks before simulated credit, Pix and transfer operations.
 
 Before offering real services, implement the chosen provider's contracts, onboarding and identity verification, authorization, reconciliation, transaction lifecycle and operational/security controls; the simulation does not provide these.
 
 The dashboard also includes local loan and investment calculators. The loan estimate uses fixed monthly installments (Price system); the investment estimate compounds monthly and adds contributions at each month-end. Rates and terms are supplied by the user. Neither calculator includes taxes, fees or inflation, and neither offers or contracts a financial product.
+
+### Simulated cards, finance organization, splits and notifications
+
+The virtual card is a simulation only and has no PAN, expiration date, CVV, physical-card issuance or real authorization. Its user-configured fictional credit limit tracks monthly simulated credit purchases; debit purchases and statement payments use only the simulated account balance. Blocking, unblocking, loss and fraud reports affect only the simulation. Simulated purchase history, statements and categories contain no provider-confirmed transactions.
+
+Financial organization classifies recorded simulated expenses, tracks monthly category budgets, and displays in-app budget alerts. Goals reserve part of the simulated balance, reducing the simulated available balance until the user releases the amount. These features do not connect to real balances or yield.
+
+Rateio history records each calculated share. The owner can edit groups and mark a participant's share as manually reported as paid; a participant can report only their own share. This is an acknowledgement, not proof of settlement or a money transfer. External invitations remain disabled until an email or SMS service is configured.
+
+After a simulated account, card, or financial-organization action, the dashboard refreshes the related panels. Creating a split expense also refreshes split history. These updates are local to the current dashboard; automatically processed schedules and changes in other sessions require a later refresh.
+
+The in-app notification inbox supports read status. Email, push, and SMS are reported as `NOT_CONFIGURED`; the app does not claim delivery and has no external notification sender. `GET /simulation/providers/readiness` shows whether provider adapters are registered.
+
+Successful simulated balance operations, schedules, bills, card actions, goal movements and business application creation write audit events in the same database transaction. Successful logins and rejected credentials are also recorded; a rejected login has no identified actor or resource. Events contain IDs, type and timestamp, not CPF/CNPJ, passwords or payment details. Validation failures rejected before the login handler, other actions and access failures are not all covered.
+
+This is partial operational auditing, not tamper-proof audit storage: database administrators can alter it, and there is no retention policy, alerting or centralized monitoring. Before public use, ship audit and gateway security events to independently controlled, append-only storage, restrict and periodically review access, define retention and incident procedures, and ensure the storage is monitored. Do not rely on this table as a complete regulatory audit trail.
+
+`AuditArchivePort` and `AuditAlertPort` prepare an export worker, disabled by default. When explicitly enabled with `app.audit.export.enabled=true`, both adapters must be configured or startup fails. Committed audit events stay pending until the archive acknowledges them; failures are logged, postponed and passed to the alert adapter. Delivery may be repeated after a crash, so the archive must deduplicate by event ID. The archive must independently enforce immutable retention. No archive or alert adapter is provided, no retention has been selected, and alerts themselves are not durably queued. This preparation does not make the local database immutable or guarantee alerts.
+
+Unknown accounts still perform a password-hash check to reduce one account-enumeration timing difference; this is not a guarantee of constant-time authentication. Login throttling remains a deployment prerequisite. Apply rate limits and abuse detection at a trusted gateway that sees the actual client, and protect direct backend access as well. The Next.js server forwards login requests to the backend without a trusted client address, so treating the backend peer or an arbitrary forwarded header as the client would be ineffective or unsafe. Configure trusted proxy boundaries and distributed limits for the chosen deployment; no gateway limiter is currently installed or enabled. The CPF-based lockout remains deliberately deferred.
+
+### Provider integration boundary
+
+`FinancialProviderPort`, `CardProviderPort`, `CreditProviderPort`, `InvestmentProviderPort`, `InsuranceProviderPort`, and `NotificationDeliveryPort` define provider-neutral contracts only. This repository does not select or connect a financial provider through these ports. Do not register a production adapter until provider, KYC/AML, safeguarding/settlement, dispute, reconciliation, card-network, data-processing, secret-management, and incident-response responsibilities are contractually approved. `BAAS_ENABLED` must remain false until that work and the production integration are separately implemented and validated.
+
+Backend tests include authenticated API integration tests against a temporary PostgreSQL container; running the full Maven test suite requires a working Docker daemon. Test data and test keys are isolated from the configured application database.
+
+The legacy `POST /accounts` endpoint always returns 503, including when `BAAS_ENABLED=true`; enabling the flag alone cannot open an account. `FinancialProviderPort` also defines a preliminary Pix-key submission and lookup contract, with distinct pending, settled, rejected and unknown outcomes. No adapter, endpoint, operation journal, recipient verification, provider reconciliation or real Pix execution implements this contract. A provider timeout or an empty lookup must not be interpreted as a failed payment or automatically retried; integration must preserve the idempotency key and resolve uncertain outcomes with the provider. QR codes, refunds, scheduling, transfer and bill-payment provider contracts remain future work.
 
 Run Next.js as a server (for example, `npm run start`). Static export is disabled because authentication cookies, API routes, and `proxy.ts` require server-side execution.
 
@@ -92,6 +134,8 @@ pnpm dev
 # or
 bun dev
 ```
+
+The development script uses Webpack to work around a Turbopack/PostCSS subprocess crash observed on Windows. To try Turbopack separately, run `npx next dev --turbopack` after stopping the existing development server.
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 

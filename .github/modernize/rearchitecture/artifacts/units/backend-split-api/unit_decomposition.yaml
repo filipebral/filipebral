@@ -1,0 +1,7 @@
+unit: backend-split-api
+commit: false
+candidate_splits:
+  - id: giro-app/backend/src/main/java/com/giro_app/backend/ProcessSplitTransactionUseCase.java:27-65
+    drivers: [concern_split, lifecycle_split]
+    rationale: "Group ownership, allocation calculation, and transaction history persistence can have independent validation and lifecycle rules."
+    source_slice: {file: giro-app/backend/src/main/java/com/giro_app/backend/ProcessSplitTransactionUseCase.java, lines: [27, 65]}

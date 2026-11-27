@@ -1,0 +1,7 @@
+unit: next-auth-experience
+commit: false
+candidate_splits:
+  - id: giro-app/app/page.tsx:13-35
+    drivers: [concern_split, change_cadence_split]
+    rationale: "Authentication transport and error/loading state can change independently from the page presentation and future onboarding/KYC steps."
+    source_slice: {file: giro-app/app/page.tsx, lines: [13, 35]}

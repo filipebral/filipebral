@@ -1,0 +1,57 @@
+flows:
+  - name: "cookie-to-bearer transition"
+    medium: cookie
+    key: giro_access_token
+    writer:
+      unit: next-auth-bff
+      source_loc: "giro-app/lib/auth-server.ts:40"
+    reader:
+      unit: next-api-boundary
+      source_loc: "giro-app/app/api/proxy/[...path]/route.ts:15"
+    pairing: matched
+    must_preserve: true
+    must_confirm: null
+    verification_hint: "Login; confirm HttpOnly cookie; call /api/proxy/simulation/account; backend receives Bearer token."
+    notes: "BFF strips Cookie and sends only Authorization to Spring."
+  - name: "JWT subject to account ownership"
+    medium: jwt-claim
+    key: sub
+    writer:
+      unit: backend-auth-api
+      source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthService.java:76"
+    reader:
+      unit: backend-simulation-api
+      source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationController.java:97"
+    pairing: matched
+    must_preserve: true
+    must_confirm: null
+    verification_hint: "Register/login, then verify user-specific simulated balance and data isolation."
+    notes: "Also consumed by account and split APIs."
+  - name: "frontend idempotency identity"
+    medium: database
+    key: "user_id + request_id"
+    writer:
+      unit: next-dashboard-experience
+      source_loc: "giro-app/components/SimulationPanel.tsx:104"
+    reader:
+      unit: backend-simulation-api
+      source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationService.java:55"
+    pairing: matched
+    must_preserve: true
+    must_confirm: null
+    verification_hint: "Repeat identical operation after network retry; balance changes once and 409 is returned for changed payload."
+    notes: "Key is client-generated per signature and persisted by backend."
+  - name: "provider status gate"
+    medium: framework-context
+    key: baas.enabled
+    writer:
+      unit: backend-account-provider-api
+      source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AccountController.java:17"
+    reader:
+      unit: next-dashboard-experience
+      source_loc: "giro-app/app/dashboard/page.tsx:29"
+    pairing: unmatched-reader
+    must_preserve: true
+    must_confirm: runtime
+    verification_hint: "With BAAS_ENABLED=false, POST /accounts must remain 503 and UI must explain no real movement."
+    notes: "Frontend does not consume status metadata; it sees the response contract only."

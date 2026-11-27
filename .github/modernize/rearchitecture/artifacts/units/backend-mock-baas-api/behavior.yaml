@@ -1,0 +1,23 @@
+unit: backend-mock-baas-api
+side_effects:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/BaasMockController.java:13"
+    effect: "Returns synthetic account identifiers and zero initial balance; no external system is mutated."
+    must_preserve: true
+branches:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/BaasMockController.java:10"
+    condition: "Spring profile is prod"
+    behavior: "Mock controller is absent."
+    must_preserve: true
+error_paths:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/BaaSGatewayImpl.java:13"
+    trigger: "Feign transport fails"
+    outcome: "Exception propagates to account use case."
+    contract: "Provider details are not returned to browser."
+    must_preserve: true
+concurrency:
+  model: sync
+  tx_boundary:
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/BaaSGatewayImpl.java:13"
+    scope: "One synchronous HTTP call; no local transaction."
+    isolation: "none"
+    must_preserve: false

@@ -2,8 +2,8 @@ import "./globals.css";
 import React from "react";
 
 export const metadata = {
-  title: "Giro | O banco que acompanha o seu ritmo",
-  description: "Acesso antecipado ao banco Giro.",
+  title: "Giro | Seu dinheiro, no seu ritmo",
+  description: "Conheça os serviços financeiros simulados do Giro e organize suas finanças.",
 };
 
 //  Código Corrigido: Desestruturando { children } diretamente

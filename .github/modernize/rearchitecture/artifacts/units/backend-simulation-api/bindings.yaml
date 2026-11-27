@@ -1,0 +1,21 @@
+unit: backend-simulation-api
+bindings:
+  - type: annotation
+    name: "@RequestMapping /simulation and @ConditionalOnProperty"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationController.java:19"
+    target: "all simulation endpoints"
+    must_appear_in_target: true
+    notes: "Simulation is explicit and conditionally present."
+  - type: annotation
+    name: "@AuthenticationPrincipal Jwt"
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationController.java:38"
+    target: "JWT subject"
+    must_appear_in_target: true
+    notes: "Owning user comes from token, never request body."
+runtime_config:
+  - key: app.simulation.enabled
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationController.java:20"
+    source: annotation
+    default_value: "true"
+    must_appear_in_target: true
+    notes: "Turning off yields route 404; UI handles absence."

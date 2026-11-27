@@ -1,0 +1,46 @@
+project:
+  scope_path: "."
+  loc: 3112
+  languages: [javascript, java]
+  git: true
+  structure:
+    app: "Next.js application routes and UI entry points"
+    backend: "Spring Boot backend module"
+    components: "Shared frontend components"
+    lib: "Shared frontend utilities and contracts"
+    giro-app: "Nested secondary copy of the Next.js and Spring Boot project structure; scope to be confirmed during planning"
+    public: "Static frontend assets"
+  notes: "Next.js + Spring Boot digital-banking MVP with simulation-only financial behavior and a duplicated nested project tree; current scope requires capability hardening and provider-ready abstractions."
+
+assessment:
+  change_type: upgrade
+  rationale: |
+    Extend and harden the existing Next.js/Spring Boot MVP in place through new product, platform, security, observability, and UI capabilities. This is a same-stack capability upgrade, not a cross-stack rewrite.
+    The broad financial scope is technically feasible, but provider credentials, contracts, and external approvals are required; implementation must remain truthfully simulation-only until a configured provider exists.
+  transformations:
+    - fromStack: "Simulation-only digital banking MVP"
+      fromStackVersion: "current"
+      toStack: "Provider-ready Next.js/Spring Boot digital banking platform with contract-level financial integrations"
+      toStackVersion: "current-stack"
+  grouping_needed: false
+  deep_planning: true
+
+progress_sync:
+  run_id: 51fe4ea3-cf43-473e-828e-fea687e3d8f0
+  grouping_mode: none
+  execution_mode: all-at-once
+  plan_start_time: 2026-11-23T03:03:16Z
+  plan_completed_time: ""
+  execution_start_time: ""
+  execution_completed_time: ""
+  validation_start_time: ""
+  validation_completed_time: ""
+  total_phases: 4
+  completed_phases: 0
+  total_modules: 4
+  completed_modules: 0
+  total_tasks: 16
+  completed_tasks: 9
+  total_commits: 6
+  build_verified: false
+  test_verified: false

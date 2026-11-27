@@ -1,0 +1,31 @@
+unit: next-api-boundary
+side_effects:
+  - source_loc: "giro-app/app/api/proxy/[...path]/route.ts:25"
+    effect: "Forwards a request to Spring with Bearer JWT and no browser Cookie or Host header."
+    must_preserve: true
+branches:
+  - source_loc: "giro-app/app/api/proxy/[...path]/route.ts:6"
+    condition: "Unsafe method with Origin not equal to Next origin"
+    behavior: "Reject 403 before backend."
+    must_preserve: true
+  - source_loc: "giro-app/app/api/proxy/[...path]/route.ts:14"
+    condition: "No access token cookie"
+    behavior: "Return 401."
+    must_preserve: true
+  - source_loc: "giro-app/proxy.ts:46"
+    condition: "Dashboard cookie token invalid or absent"
+    behavior: "Redirect to / and delete an invalid cookie."
+    must_preserve: true
+error_paths:
+  - source_loc: "giro-app/app/api/proxy/[...path]/route.ts:39"
+    trigger: "Spring fetch fails"
+    outcome: "Return 502 service unavailable."
+    contract: "JSON {message}; no backend details leaked."
+    must_preserve: true
+concurrency:
+  model: event-loop
+  tx_boundary:
+    source_loc: "giro-app/app/api/proxy/[...path]/route.ts:25"
+    scope: "Single streamed backend response; no cross-request state."
+    isolation: "request"
+    must_preserve: false

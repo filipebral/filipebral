@@ -15,13 +15,16 @@ public class ProcessSplitTransactionUseCase {
 
     private final SplitGroupRepository splitGroupRepository;
     private final SplitTransactionRepository splitTransactionRepository;
+    private final SplitPaymentShareRepository paymentShares;
 
     public ProcessSplitTransactionUseCase(
             SplitGroupRepository splitGroupRepository,
-            SplitTransactionRepository splitTransactionRepository
+            SplitTransactionRepository splitTransactionRepository,
+            SplitPaymentShareRepository paymentShares
     ) {
         this.splitGroupRepository = splitGroupRepository;
         this.splitTransactionRepository = splitTransactionRepository;
+        this.paymentShares = paymentShares;
     }
 
     @Transactional
@@ -55,6 +58,8 @@ public class ProcessSplitTransactionUseCase {
                 request.totalAmount()
         );
         splitTransactionRepository.save(entity);
+        paymentShares.saveAll(shares.stream().map(share ->
+                new SplitPaymentShare(transactionId, share.userId(), share.allocatedAmount())).toList());
 
         System.out.println(">> [SPLIT ENGINE] Transação " + transactionId + " salva com sucesso no banco!");
 

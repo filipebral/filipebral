@@ -1,0 +1,30 @@
+unit: backend-auth-api
+side_effects:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthService.java:39"
+    effect: "Registration validates CPF, stores encrypted CPF plus HMAC lookup hash and BCrypt password, then emits JWT."
+    must_preserve: true
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthService.java:71"
+    effect: "Successful register/login issues HS256 token with issuer, audience, subject, name, issue and expiry claims."
+    must_preserve: true
+branches:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthService.java:42"
+    condition: "Duplicate CPF lookup hash"
+    behavior: "Return 409 generic message without confirming record existence."
+    must_preserve: true
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthService.java:61"
+    condition: "No matching user or wrong password"
+    behavior: "Return 401 generic invalid credentials."
+    must_preserve: true
+error_paths:
+  - source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthService.java:40"
+    trigger: "UTF-8 password exceeds BCrypt safe 72 bytes"
+    outcome: "400 registration or 401 login; no hash/token."
+    contract: "structured GlobalExceptionHandler response."
+    must_preserve: true
+concurrency:
+  model: sync
+  tx_boundary:
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthService.java:39"
+    scope: "User uniqueness check and registration persistence; login read-only."
+    isolation: "database default + unique cpf_lookup_hash"
+    must_preserve: true

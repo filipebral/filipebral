@@ -1,0 +1,134 @@
+contracts:
+  - name: next-auth-login-register
+    unit: next-auth-bff
+    type: rest
+    stability: frozen
+    source_loc: "giro-app/lib/auth-server.ts:16"
+    contract:
+      method: POST
+      path: "/api/auth/login|register"
+      request: "login={cpf,password}; register={cpf,name,password}"
+      response: "{user:{id,name}}; token held only in HttpOnly cookie"
+      error: "Preserve backend status; message from backend message/detail; invalid JSON 400; unavailable 502."
+      auth: "None for login/register; sets cookie."
+    target_contract:
+      method: "POST /api/auth/login|register"
+      notes: "Same browser-visible contract; retain cookie/JWT bridge."
+    semantic_divergence:
+      - field: expiresIn
+        issue: "Backend returns seconds, Next converts to cookie maxAge seconds and omits token from browser JSON."
+        source_loc: "giro-app/lib/auth-server.ts:26"
+  - name: spring-auth-login
+    unit: backend-auth-api
+    type: rest
+    stability: frozen
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthController.java:21"
+    contract:
+      method: POST
+      path: "/api/auth/login and /api/auth/register"
+      request: "validated CPF/name/password DTO"
+      response: "{token,expiresIn,user:{id,name}}"
+      error: "400 validation/CPF; 401 login; 409 duplicate registration; structured {status,error,message}."
+      auth: "Public."
+    target_contract:
+      method: "same Spring endpoints and DTO component names"
+      notes: "Recovery/KYC-ready additions must be additive; do not break existing component names."
+    semantic_divergence:
+      - field: cpf
+        issue: "Browser strips punctuation, Spring also strips/validates and encrypts persisted CPF."
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/AuthService.java:89"
+  - name: next-proxy
+    unit: next-api-boundary
+    type: rest
+    stability: frozen
+    source_loc: "giro-app/app/api/proxy/[...path]/route.ts:5"
+    contract:
+      method: GET/HEAD/POST/PUT/PATCH/DELETE
+      path: "/api/proxy/<backend path>"
+      request: "same query/body; browser cookie not forwarded"
+      response: "backend status/body and content-type; redirect manual"
+      error: "401 missing cookie, 403 cross-origin mutation, 502 backend unavailable."
+      auth: "HttpOnly giro_access_token -> Authorization Bearer."
+    target_contract:
+      method: "same same-origin proxy methods"
+      notes: "Keep cookie stripping, origin check, path encoding, and manual redirect semantics."
+    semantic_divergence:
+      - field: headers
+        issue: "Only content-type is returned upstream; other provider/backend headers are intentionally omitted."
+        source_loc: "giro-app/app/api/proxy/[...path]/route.ts:33"
+  - name: provider-account-create
+    unit: backend-account-provider-api
+    type: rest
+    stability: frozen
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/BaaSFeignClient.java:7"
+    contract:
+      method: POST
+      path: "{baas.api.url}/accounts"
+      request: "{customerId,accountType:CHECKING}"
+      response: "{baasAccountId,accountNumber,branch,routingNumber,initialBalance,status}"
+      error: "Feign exception becomes generic 500 at use case boundary."
+      auth: "Provider-specific auth not configured."
+    target_contract:
+      method: "BaaSGateway.createAccountForCustomer(String) -> BaaSAccountResponse"
+      notes: "Keep provider transport behind gateway and test double; exact external provider mapping remains blocked pending contract."
+    semantic_divergence:
+      - field: status
+        issue: "Provider response is accepted regardless of status text; Account.activate marks ACTIVE after successful transport."
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/CreateAccountUseCase.java:37"
+  - name: simulation-api
+    unit: backend-simulation-api
+    type: rest
+    stability: frozen
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SimulationController.java:32"
+    contract:
+      method: GET/POST
+      path: "/simulation/{status,account,statement,credit,pix,transfer,schedules,schedules/{id}/cancel,bills,bills/{id}/pay}"
+      request: "{requestId,amount,destination|description,scheduledAt|dueDate}"
+      response: "AccountView, TransactionView[], ScheduleView[], BillView[]"
+      error: "400 invalid request; 404 missing simulated entity; 409 reused id; 422 insufficient/limit balance; 401 JWT."
+      auth: "Bearer JWT, subject = user UUID."
+    target_contract:
+      method: "same paths, DTO names, status types and numeric serialization"
+      notes: "All operations remain explicitly simulated; never bridge to real provider."
+    semantic_divergence:
+      - field: amount
+        issue: "Browser sends string-like decimal JSON while Spring binds BigDecimal; UI formatting must not introduce binary floating-point drift."
+        source_loc: "giro-app/components/SimulationPanel.tsx:109"
+  - name: split-api
+    unit: backend-split-api
+    type: rest
+    stability: frozen
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/SplitGroupController.java:19"
+    contract:
+      method: POST
+      path: "/api/split-groups and /api/split-transactions"
+      request: "group={name,members:[{userId,percentage}]}; transaction={splitGroupId,totalAmount,description}"
+      response: "group={id,name,ownerUserId,members}; transaction={transactionId,description,totalAmount,shares}"
+      error: "400 invalid percentage/group; 403 non-owner transaction; 401 JWT."
+      auth: "Bearer JWT, subject = owner/requester."
+    target_contract:
+      method: "same endpoints and JSON component names"
+      notes: "Additive validation fields are allowed only when backward-compatible."
+    semantic_divergence:
+      - field: allocatedAmount
+        issue: "Backend calculates BigDecimal HALF_EVEN 2dp; frontend displays Number.toFixed and must not become authoritative."
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/ProcessSplitTransactionUseCase.java:38"
+  - name: split-event
+    unit: backend-split-event-consumer
+    type: rabbitmq
+    stability: may_change
+    source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/RabbitMQConfig.java:11"
+    contract:
+      method: transaction.created
+      path: "giro.financial.exchange -> giro.split-bills.queue"
+      request: "{accountId,amount,category}"
+      response: "none"
+      error: "Listener exception triggers broker retry/redelivery; listener auto-start currently false."
+      auth: "RabbitMQ environment."
+    target_contract:
+      method: "Rabbit event DTO with stable event id plus provider-safe command bridge"
+      notes: "Current event lacks stable event id/idempotency; do not enable real transfers until fixed and approved."
+    semantic_divergence:
+      - field: accountId
+        issue: "Current Java event uses String while domain Account IDs are UUID."
+        source_loc: "giro-app/backend/src/main/java/com/giro_app/backend/TransactionEventPublisher.java:26"
